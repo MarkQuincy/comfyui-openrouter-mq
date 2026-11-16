@@ -57,28 +57,43 @@ def save_cache(models, path=CACHE_FILE):
     _write_json(path, {"fetched_at": int(time.time()), "data": models})
 
 
-def get_models(client=None, refresh=False, cache_path=CACHE_FILE):
-    """Image models: from the cache, or fetched when ``refresh`` or no cache yet.
+def get_models(client=None, refresh=False, cache_path=None, kind="image"):
+    """Models of one kind (image/video/speech): from the cache, or fetched when
+    ``refresh`` or no cache yet.
 
     Works offline: without a client, or if the fetch fails, the cache is used.
     Returns ``(models, error)``; ``error`` is a message string or None.
     """
+    default_path, method, keep = KINDS[kind]
+    cache_path = cache_path or default_path
     cached = load_cache(cache_path)
     if client is None or (cached and not refresh):
-        return image_models(cached), None
+        return keep(cached), None
     try:
-        fetched = client.list_models()
+        fetched = getattr(client, method)()
     except OpenRouterError as exc:
-        return image_models(cached), f"model list refresh failed, using cache: {exc}"
+        return keep(cached), f"{kind} model list refresh failed, using cache: {exc}"
     save_cache(fetched, cache_path)
-    return image_models(fetched), None
+    return keep(fetched), None
 
 
 # -- sorting and labels ----------------------------------------------------------
 
 
+def with_id(models):
+    return [m for m in models if isinstance(m, dict) and m.get("id")]
+
+
 def image_models(models):
-    return [m for m in models if isinstance(m, dict) and m.get("id") and outputs_images(m)]
+    return [m for m in with_id(models) if outputs_images(m)]
+
+
+# kind -> (cache file, client method, filter)
+KINDS = {
+    "image": (CACHE_FILE, "list_models", image_models),
+    "video": (USER_DIR / "video_models_cache.json", "list_video_models", with_id),
+    "speech": (USER_DIR / "speech_models_cache.json", "list_speech_models", with_id),
+}
 
 
 def family(model_id):

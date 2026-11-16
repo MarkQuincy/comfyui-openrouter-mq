@@ -168,7 +168,7 @@ def test_folder_box_subfolder_or_full_path(monkeypatch, tmp_path):
 
 def test_folder_box_is_optional_widget(monkeypatch):
     from comfy_openrouter import models as model_list
-    monkeypatch.setattr(model_list, "get_models", lambda client=None, refresh=False: ([], None))
+    monkeypatch.setattr(model_list, "get_models", lambda client=None, refresh=False, kind="image": ([], None))
     monkeypatch.setattr(model_list, "load_favorites", lambda: [])
     monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
     kind, options = g.OpenRouterGenerate.INPUT_TYPES()["optional"]["folder"]
@@ -177,7 +177,7 @@ def test_folder_box_is_optional_widget(monkeypatch):
 
 def test_generate_node_is_output_node_with_hidden_inputs(monkeypatch, tmp_path):
     from comfy_openrouter import models as model_list
-    monkeypatch.setattr(model_list, "get_models", lambda client=None, refresh=False: ([], None))
+    monkeypatch.setattr(model_list, "get_models", lambda client=None, refresh=False, kind="image": ([], None))
     monkeypatch.setattr(model_list, "load_favorites", lambda: [])
     monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
     hidden = g.OpenRouterGenerate.INPUT_TYPES()["hidden"]

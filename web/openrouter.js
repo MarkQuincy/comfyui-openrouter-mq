@@ -3,7 +3,7 @@
 import { app } from "../../scripts/app.js";
 import { api } from "../../scripts/api.js";
 
-const NODE = "OpenRouterGenerate";
+const NODES = ["OpenRouterGenerate", "OpenRouterSpeak", "OpenRouterVideo"];
 const shared = { balance: "Balance: not loaded", pending: null };
 
 function money(value, digits = 2) {
@@ -86,7 +86,7 @@ app.registerExtension({
   },
 
   beforeRegisterNodeDef(nodeType, nodeData) {
-    if (nodeData.name !== NODE) return;
+    if (!NODES.includes(nodeData.name)) return;
 
     const onNodeCreated = nodeType.prototype.onNodeCreated;
     nodeType.prototype.onNodeCreated = function () {

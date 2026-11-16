@@ -166,7 +166,38 @@ Check: tests for the route logic. USER: values visible and refresh works.
 `examples/`: single person, face → full body → tweak chain, 4 variants, model comparison
 (one prompt → several Generate nodes). README with usage.
 
-### Later (not v1)
+### M6 Audio, video and JSON recipes (v1.1)
+Docs: https://openrouter.ai/docs/features/multimodal/tts and
+https://openrouter.ai/docs/features/multimodal/video-generation
+- **JSON recipe next to every saved file** (images too): `name_001.png` →
+  `name_001.json`, never overwritten. Content = the metadata dict with
+  `"schema": "openrouter-meta/2"` plus `kind` (`image`/`audio`/`video`), `file`
+  (file name) and `file_hash` (`sha256:` of the saved file bytes). For audio/video
+  `pixel_hash` is null. The PNG `openrouter` chunk stays `openrouter-meta/1`, unchanged.
+- **OpenRouter Speak** node: `text` (STRING, connected), `context`, widgets `model`
+  (speech models from `GET /models?output_modalities=speech`), `voice` (text, default
+  `alloy`), `format` (`mp3`/`pcm`), `speed`, `instructions`, `name`, `folder`.
+  `POST /audio/speech` returns raw audio. Saves `.mp3`, or `.wav` for pcm (assumed
+  24 kHz 16-bit mono). Outputs ComfyUI `AUDIO` + info. Cost is not in the response → null.
+- **OpenRouter Video** node: `prompt` (STRING, connected), `context`, `first_frame`,
+  `last_frame` (IMAGE, optional), widgets `model` (from `GET /videos/models`),
+  `aspect_ratio`, `resolution`, `duration` (0 = model default), `generate_audio`
+  (auto/on/off), `seed`, `name`, `folder`. `POST /videos` → poll `GET /videos/{id}`
+  every 10 s (stops on ComfyUI cancel, gives up after 30 min) → download
+  `GET /videos/{id}/content`. Values the model does not list in `supported_*` are not
+  sent (warning). Saves `.mp4`; outputs the file path (STRING) + info.
+  `refs` in the recipe = pixel hashes of the frames sent, so a video links back to
+  the portrait it was made from.
+- Model caches per kind (`user/video_models_cache.json`, `user/speech_models_cache.json`),
+  same favorites file, same sort. "refresh models" refreshes all kinds.
+- Cost/balance display also on Speak and Video nodes.
+- Not in scope: ComfyUI VIDEO output type, Transcribe node, audio/video references,
+  editing/extending a video (`previous_job_id`).
+Check: tests with fake transport (speech bytes, video submit → poll → download,
+failed job, unsupported values dropped, JSON recipes for all kinds).
+USER: one real speech and one real short video in ComfyUI.
+
+### Later
 - "AI gate": a local agent (Ollama/Hermes via MCP) writes text into a chosen Prompt node.
 - Structured prompt (constant style block + changing person block).
 </content>

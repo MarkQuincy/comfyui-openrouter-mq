@@ -9,7 +9,7 @@ author, project, person, references, workflow) inside the PNG.
 > real ComfyUI on Windows, and the code has automated tests, but please review it
 > before relying on it.
 
-Version 1.0.0. Design notes: `SPEC.md`. License: MIT.
+Version 1.1.0 (beta: speech, video, JSON recipes). Design notes: `SPEC.md`. License: MIT.
 
 ![OpenRouter nodes in ComfyUI: a reference photo and a prompt go into OpenRouter Generate, which returns a full-body studio portrait and shows the run's cost](docs/screenshot.png)
 
@@ -23,6 +23,8 @@ image can go on to any other node (here: background removal).*
 | OpenRouter Prompt | Multiline prompt text → STRING (any other STRING node works too) |
 | OpenRouter Context | Project + person, typed once, wired to all Generate nodes of one person |
 | OpenRouter Generate | Prompt + up to 4 reference images + model → IMAGE; saves the file; shows cost and balance |
+| OpenRouter Speak | Text → speech (AUDIO); saves `.mp3` (or `.wav` for `pcm`) |
+| OpenRouter Video | Prompt + optional first/last frame → video; saves `.mp4`, outputs its path |
 
 ## Install (Windows, PowerShell)
 
@@ -74,7 +76,8 @@ Seed is set to *randomize*, so pressing Run again gives a new variant.
 
 At the bottom of the node: **Last run** (cost, model), **balance** (key limit left, and
 account credit if a management key is set), and the buttons **refresh balance** and
-**refresh models** (downloads the newest model list and updates the dropdowns).
+**refresh models** (downloads the newest image, video and speech model lists and updates
+the dropdowns).
 
 ### Saved files
 Every Generate run saves its image itself (no Save Image node needed), e.g.
@@ -86,13 +89,30 @@ Each PNG also carries `openrouter` metadata (schema `openrouter-meta/1`, see `SP
 with a pixel hash of the image and of each reference, so a catalog tool can show which
 image was made from which.
 
+Every saved file (image, audio, video) also gets a **JSON recipe** with the same name,
+e.g. `..._001.png` + `..._001.json` (schema `openrouter-meta/2`: the same fields plus
+`kind`, `file` and `file_hash`). A video's recipe lists the pixel hash of its first/last
+frame, so it links back to the portrait it was made from.
+
+### Speech and video
+- **Speak**: pick a model and a voice (voices depend on the model, e.g. `alloy`, `nova`
+  for OpenAI). `format` `pcm` is saved as `.wav` (assumed 24 kHz mono); `mp3` needs
+  torchaudio with mp3 support for the AUDIO output (the file is saved either way).
+  OpenRouter does not report speech cost, so it shows as unknown.
+- **Video**: connect a Generate image to `first_frame` (and optionally `last_frame`).
+  `duration` 0 = model default; values the model does not support are not sent
+  (console warning). A job takes from 30 s to several minutes; the node waits and stops
+  waiting if you press Cancel (OpenRouter may still charge for the started job).
+  Video costs much more than images.
+
 ### Files you can edit
 Created next to the node in `user\` on first run:
 - `favorites.json` — list of favorite model ids, e.g. `["google/gemini-3-pro-image"]`.
   Favorites get a ★ and come first within their company. Press **refresh models** after editing.
 - `settings.json` — `filename_pattern`, default
   `{date}_{project}_{person}_{name}_{model}_{counter}`.
-- `models_cache.json` — the last model list (lets ComfyUI start offline).
+- `models_cache.json`, `video_models_cache.json`, `speech_models_cache.json` — the last
+  model lists (let ComfyUI start offline).
 
 ## Example workflows
 Drag a file from `examples\` into ComfyUI, load your photo in **Load Image**, and pick
@@ -104,6 +124,8 @@ models in the dropdowns (the examples use `google / gemini-3-pro-image`).
 | `02_face_fullbody_tweak.json` | Chain: face → full body → fix, each step uses the previous image as `ref_1` |
 | `03_four_variants.json` | 4 Generate nodes with one prompt = 4 variants per Run |
 | `04_model_comparison.json` | One prompt → 3 Generate nodes, pick a different model in each |
+| `05_speak.json` | Text → speech → Preview Audio |
+| `06_portrait_to_video.json` | Generate a portrait, then use it as the first frame of a video |
 
 For the next person: copy the nodes (Ctrl+C / Ctrl+V), change Context, prompt and photo.
 

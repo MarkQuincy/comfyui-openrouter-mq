@@ -1,11 +1,18 @@
 """The ``openrouter`` PNG metadata (a contract for tools that read it, see SPEC)."""
 
 import getpass
+import hashlib
 import json
+import logging
 import os
 from datetime import datetime
 
-SCHEMA = "openrouter-meta/1"
+from .naming import save_new
+
+SCHEMA = "openrouter-meta/1"  # PNG chunk
+RECIPE_SCHEMA = "openrouter-meta/2"  # JSON file next to every saved file
+
+log = logging.getLogger("comfyui-openrouter")
 
 
 def author():
@@ -58,3 +65,16 @@ def png_text(meta, prompt_graph=None, extra_pnginfo=None):
         text[key] = json.dumps(value)
     text["openrouter"] = json.dumps(meta)
     return text
+
+
+def save_with_recipe(folder, pattern, fields, data, ext, meta, kind):
+    """Save ``data`` as a new file plus ``<same name>.json`` (the recipe). Returns the path."""
+    path = save_new(folder, pattern, fields, data, ext)
+    recipe = {**meta, "schema": RECIPE_SCHEMA, "kind": kind, "file": path.name,
+              "file_hash": "sha256:" + hashlib.sha256(data).hexdigest()}
+    try:
+        with open(path.with_suffix(".json"), "x", encoding="utf-8") as fh:
+            json.dump(recipe, fh, indent=2, ensure_ascii=False)
+    except FileExistsError:  # never overwrite; the media file itself is saved
+        log.warning("[OpenRouter] recipe not written, file exists: %s", path.with_suffix(".json"))
+    return path

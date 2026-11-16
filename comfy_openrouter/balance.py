@@ -4,6 +4,7 @@ Never returns or logs a key; only numbers and error messages.
 """
 
 import os
+from pathlib import Path
 
 from . import models as model_list
 from .client import OpenRouterClient, OpenRouterError
@@ -49,12 +50,18 @@ def balance_payload(client=None, management_client=None):
     return out
 
 
-def refresh_models_payload(client=None, cache_path=None):
-    """Fetch the model list into the cache. ``{"count": n, "error": str | None}``."""
+def refresh_models_payload(client=None, cache_dir=None):
+    """Fetch image, video and speech model lists into their caches (in ``cache_dir`` if
+    given, for tests). ``{"count": n, "error": str | None}``."""
     if client is None:
         client = _env_client("OPENROUTER_API_KEY")
     if client is None:
         return {"count": 0, "error": "OPENROUTER_API_KEY is not set"}
-    kwargs = {"cache_path": cache_path} if cache_path else {}
-    models, error = model_list.get_models(client, refresh=True, **kwargs)
-    return {"count": len(models), "error": error}
+    count, errors = 0, []
+    for kind in model_list.KINDS:
+        path = Path(cache_dir) / model_list.KINDS[kind][0].name if cache_dir else None
+        models, error = model_list.get_models(client, refresh=True, cache_path=path, kind=kind)
+        count += len(models)
+        if error:
+            errors.append(error)
+    return {"count": count, "error": "; ".join(errors) or None}

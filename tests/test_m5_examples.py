@@ -23,7 +23,7 @@ def load_generator():
 
 def generate_widget_names(monkeypatch):
     """Widget names of the Generate node in ComfyUI's order (seed adds a control)."""
-    monkeypatch.setattr(model_list, "get_models", lambda client=None, refresh=False: ([], None))
+    monkeypatch.setattr(model_list, "get_models", lambda client=None, refresh=False, kind="image": ([], None))
     monkeypatch.setattr(model_list, "load_favorites", lambda: [])
     monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
     types = g.OpenRouterGenerate.INPUT_TYPES()
@@ -41,9 +41,10 @@ def generate_widget_names(monkeypatch):
     return names
 
 
-def test_four_examples_exist():
+def test_examples_exist():
     assert [f.name for f in FILES] == ["01_single_person.json", "02_face_fullbody_tweak.json",
-                                       "03_four_variants.json", "04_model_comparison.json"]
+                                       "03_four_variants.json", "04_model_comparison.json",
+                                       "05_speak.json", "06_portrait_to_video.json"]
 
 
 def test_files_match_generator():
@@ -72,7 +73,6 @@ def test_generate_nodes_are_valid(path, monkeypatch):
                      "control_after_generate", "name", "folder"]
     wf = json.loads(path.read_text(encoding="utf-8"))
     gens = [n for n in wf["nodes"] if n["type"] == "OpenRouterGenerate"]
-    assert gens
     for node in gens:
         values = dict(zip(names, node["widgets_values"]))
         assert len(node["widgets_values"]) == len(names)

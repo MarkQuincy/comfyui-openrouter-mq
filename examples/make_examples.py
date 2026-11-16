@@ -8,6 +8,8 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 MODEL = "google / gemini-3-pro-image"  # change in the dropdown after loading
+SPEECH_MODEL = "openai / gpt-4o-mini-tts-2025-12-15"
+VIDEO_MODEL = "google / veo-3.1"
 
 # Widget order must match INPUT_TYPES (seed is followed by its "control after generate").
 GENERATE_INPUTS = [("prompt", "STRING"), ("context", "OR_CONTEXT"), ("ref_1", "IMAGE"),
@@ -52,6 +54,23 @@ class Workflow:
         widgets = [model, aspect, "auto", "auto", seed, "randomize", name, ""]
         return self._node("OpenRouterGenerate", pos, (360, 430), widgets,
                           inputs=GENERATE_INPUTS, outputs=GENERATE_OUTPUTS, title=title)
+
+    def speak(self, pos, name, model=SPEECH_MODEL):
+        widgets = [model, "alloy", "mp3", 1.0, "", name, ""]
+        return self._node("OpenRouterSpeak", pos, (360, 330), widgets,
+                          inputs=[("text", "STRING"), ("context", "OR_CONTEXT")],
+                          outputs=[("audio", "AUDIO"), ("info", "STRING")])
+
+    def video(self, pos, name, model=VIDEO_MODEL):
+        widgets = [model, "9:16", "720p", 0, "auto", 0, "randomize", name, ""]
+        return self._node("OpenRouterVideo", pos, (360, 400), widgets,
+                          inputs=[("prompt", "STRING"), ("context", "OR_CONTEXT"),
+                                  ("first_frame", "IMAGE"), ("last_frame", "IMAGE")],
+                          outputs=[("file", "STRING"), ("info", "STRING")])
+
+    def preview_audio(self, pos):
+        return self._node("PreviewAudio", pos, (320, 120), [],
+                          inputs=[("audio", "AUDIO")])
 
     def link(self, src, src_slot, dst, dst_name):
         dst_slot = next(i for i, x in enumerate(dst["inputs"]) if x["name"] == dst_name)
@@ -141,11 +160,49 @@ def model_comparison():
     return w
 
 
+def speak_text():
+    w = Workflow()
+    w.note((40, 40), "Text to speech. The audio is saved (mp3, or wav for 'pcm') with a "
+           "JSON recipe next to it, and goes to Preview Audio.\nVoices depend on the "
+           "model (e.g. alloy, nova for OpenAI).")
+    ctx = w.context((40, 240), "ProjectX", "Ivan Petrov")
+    p = w.prompt((420, 40), "Hello! This voice was made with OpenRouter in ComfyUI.")
+    sp = w.speak((860, 40), "intro")
+    out = w.preview_audio((1260, 40))
+    w.link(p, 0, sp, "text")
+    w.link(ctx, 0, sp, "context")
+    w.link(sp, 0, out, "audio")
+    return w
+
+
+def portrait_to_video():
+    w = Workflow()
+    w.note((40, 40), "Portrait -> video. Generate makes the portrait, Video uses it as the "
+           "first frame. Video jobs take minutes and cost more than images. The MP4 and "
+           "its JSON recipe link back to the portrait by pixel hash.")
+    ctx = w.context((40, 240), "ProjectX", "Ivan Petrov")
+    ref = w.load_image((40, 380))
+    p = w.prompt((420, 40), "Studio portrait of the person in the reference photo, "
+                 "full body, plain background.")
+    gen = w.generate((420, 260), "fullbody", aspect="9:16")
+    pv = w.prompt((860, 40), "The person smiles and slowly turns towards the camera.")
+    vid = w.video((860, 260), "turn")
+    w.link(p, 0, gen, "prompt")
+    w.link(ctx, 0, gen, "context")
+    w.link(ref, 0, gen, "ref_1")
+    w.link(pv, 0, vid, "prompt")
+    w.link(ctx, 0, vid, "context")
+    w.link(gen, 0, vid, "first_frame")
+    return w
+
+
 EXAMPLES = {
     "01_single_person.json": single_person,
     "02_face_fullbody_tweak.json": face_fullbody_tweak,
     "03_four_variants.json": four_variants,
     "04_model_comparison.json": model_comparison,
+    "05_speak.json": speak_text,
+    "06_portrait_to_video.json": portrait_to_video,
 }
 
 

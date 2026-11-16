@@ -19,12 +19,13 @@ SETTINGS = {"aspect_ratio": "3:4", "resolution": "auto", "quality": "high", "see
 @pytest.fixture
 def user_dir(tmp_path, monkeypatch):
     """Point the cache and favorites files at a temp folder."""
-    monkeypatch.setattr(model_list, "CACHE_FILE", tmp_path / "models_cache.json")
+    monkeypatch.setattr(model_list, "CACHE_FILE", tmp_path / "image_models_cache.json")
     monkeypatch.setattr(model_list, "FAVORITES_FILE", tmp_path / "favorites.json")
     # get_models/load_favorites take the path as a default argument: rebind them.
     real_get, real_fav = model_list.get_models, model_list.load_favorites
-    monkeypatch.setattr(model_list, "get_models", lambda client=None, refresh=False:
-                        real_get(client, refresh, tmp_path / "models_cache.json"))
+    monkeypatch.setattr(model_list, "get_models", lambda client=None, refresh=False,
+                        kind="image": real_get(client, refresh,
+                                               tmp_path / f"{kind}_models_cache.json", kind))
     monkeypatch.setattr(model_list, "load_favorites",
                         lambda: real_fav(tmp_path / "favorites.json"))
     monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
@@ -42,7 +43,7 @@ def test_context_node():
 
 
 def test_generate_node_definition(user_dir):
-    model_list.save_cache(FAKE_MODELS, user_dir / "models_cache.json")
+    model_list.save_cache(FAKE_MODELS, user_dir / "image_models_cache.json")
     model_list.save_favorites(["fake/text-only"], user_dir / "favorites.json")
     inputs = g.OpenRouterGenerate.INPUT_TYPES()
     req, opt = inputs["required"], inputs["optional"]
@@ -64,7 +65,7 @@ def test_dropdown_without_key_or_cache(user_dir):
 def test_first_start_with_key_fetches_list(user_dir):
     fake = FakeTransport()
     assert g.model_choices(client_with(fake)) == ["fake / imagex-1", "fake / text-only"]
-    assert (user_dir / "models_cache.json").exists()
+    assert (user_dir / "image_models_cache.json").exists()
 
 
 def test_generate_sends_supported_params_and_refs():
@@ -114,7 +115,7 @@ def test_no_credits_error_reaches_the_node():
 
 
 def test_find_model_from_cache_then_refresh(user_dir):
-    model_list.save_cache([IMAGEX], user_dir / "models_cache.json")
+    model_list.save_cache([IMAGEX], user_dir / "image_models_cache.json")
     fake = FakeTransport()
     assert g.find_model("fake/imagex-1", client_with(fake))["id"] == "fake/imagex-1"
     assert fake.calls == []  # found in cache, no fetch

@@ -14,7 +14,7 @@ from . import metadata
 from . import models as model_list
 from .client import OpenRouterClient, max_refs
 from .images import data_url, encode_png, pixel_hash
-from .naming import load_settings, save_new
+from .naming import load_settings
 from .prompt_node import CATEGORY
 
 log = logging.getLogger("comfyui-openrouter")
@@ -32,21 +32,21 @@ def make_client():
     return OpenRouterClient(key) if key else None
 
 
-def model_choices(client=None):
+def model_choices(client=None, kind="image"):
     """Dropdown labels. Fetches the list only if there is no cache yet."""
-    models, error = model_list.get_models(client)
+    models, error = model_list.get_models(client, kind=kind)
     if error:
         log.warning("[OpenRouter] %s", error)
     labels = model_list.dropdown(models, model_list.load_favorites())
     return labels or [NO_MODELS]
 
 
-def find_model(model_id, client):
+def find_model(model_id, client, kind="image"):
     """Model info from the cache; refreshes the cache once if the id is not there."""
-    models, _ = model_list.get_models(None)
+    models, _ = model_list.get_models(None, kind=kind)
     info = model_list.find_model(models, model_id)
     if info is None and client is not None:
-        models, error = model_list.get_models(client, refresh=True)
+        models, error = model_list.get_models(client, refresh=True, kind=kind)
         if error:
             log.warning("[OpenRouter] %s", error)
         info = model_list.find_model(models, model_id)
@@ -93,20 +93,26 @@ def generate(client, model_info, prompt, settings, ref_pixels):
 def save_outputs(outputs, info, prompt, context, name, folder, pattern,
                  prompt_graph=None, extra_pnginfo=None, node_id=None, prompt_id=None):
     """Save each output (pixels tuple) as a new PNG with metadata. Returns paths."""
-    fields = {
+    fields = file_fields(info, context, name)
+    paths = []
+    for pixels in outputs:
+        meta = metadata.build(info, prompt, context, name, pixel_hash(pixels), info["refs"],
+                              node_id=node_id, prompt_id=prompt_id)
+        data = encode_png(pixels, metadata.png_text(meta, prompt_graph, extra_pnginfo))
+        paths.append(metadata.save_with_recipe(folder, pattern, fields, data, ".png", meta,
+                                               "image"))
+    return paths
+
+
+def file_fields(info, context, name):
+    """Values for the file name pattern."""
+    return {
         "date": date.today().isoformat(),
         "project": (context or {}).get("project", ""),
         "person": (context or {}).get("person", ""),
         "name": name,
         "model": info["model"].split("/", 1)[-1],
     }
-    paths = []
-    for pixels in outputs:
-        meta = metadata.build(info, prompt, context, name, pixel_hash(pixels), info["refs"],
-                              node_id=node_id, prompt_id=prompt_id)
-        text = metadata.png_text(meta, prompt_graph, extra_pnginfo)
-        paths.append(save_new(folder, pattern, fields, encode_png(pixels, text)))
-    return paths
 
 
 def output_dir(folder=""):

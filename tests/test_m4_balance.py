@@ -56,11 +56,12 @@ def test_payload_never_contains_keys():
     assert "api-key" not in text and "mgmt-key" not in text
 
 
-def test_refresh_models_writes_cache(tmp_path):
-    cache = tmp_path / "models_cache.json"
-    result = balance.refresh_models_payload(client(), cache_path=cache)
-    assert result == {"count": 2, "error": None}
-    assert len(json.loads(cache.read_text(encoding="utf-8"))["data"]) == 2
+def test_refresh_models_writes_all_caches(tmp_path):
+    result = balance.refresh_models_payload(client(), cache_dir=tmp_path)
+    assert result == {"count": 4, "error": None}  # 2 image + 1 video + 1 speech
+    for name, n in [("models_cache.json", 2), ("video_models_cache.json", 1),
+                    ("speech_models_cache.json", 1)]:
+        assert len(json.loads((tmp_path / name).read_text(encoding="utf-8"))["data"]) == n
 
 
 def test_refresh_models_without_key(monkeypatch):

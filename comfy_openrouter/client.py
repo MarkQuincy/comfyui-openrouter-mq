@@ -48,11 +48,15 @@ class NetworkError(OpenRouterError):
 
 
 def urllib_transport(method, url, headers, body, timeout):
-    """Send one request. Returns ``(status, payload)``; raises ``NetworkError``."""
+    """Send one request. Returns ``(status, payload)``; raises ``NetworkError``.
+    ``payload`` is parsed JSON, or raw bytes for non-JSON answers (audio, video)."""
     request = urllib.request.Request(url, data=body, headers=headers, method=method)
     try:
         with urllib.request.urlopen(request, timeout=timeout) as resp:
-            return resp.status, _parse_json(resp.read())
+            raw = resp.read()
+            if "json" not in resp.headers.get("Content-Type", "json"):
+                return resp.status, raw
+            return resp.status, _parse_json(raw)
     except urllib.error.HTTPError as exc:
         return exc.code, _parse_json(exc.read())
     except (urllib.error.URLError, OSError) as exc:
@@ -185,6 +189,48 @@ class OpenRouterClient:
         """Key info (``GET /key``); includes ``limit_remaining``."""
         data = self._request("GET", "/key") or {}
         return data.get("data", data)
+
+    def list_video_models(self):
+        return (self._request("GET", "/videos/models") or {}).get("data") or []
+
+    def list_speech_models(self):
+        return (self._request("GET", "/models?output_modalities=speech") or {}).get("data") or []
+
+    def speech(self, payload):
+        """``POST /audio/speech``; returns the raw audio bytes."""
+        data = self._request("POST", "/audio/speech", payload)
+        if not isinstance(data, bytes) or not data:
+            raise OpenRouterError("speech response contains no audio")
+        return data
+
+    def video(self, payload, poll=10.0, timeout=1800.0, check_cancel=None):
+        """Submit a video job, poll until done, download it. Returns ``(bytes, cost)``.
+
+        ``check_cancel`` is called about once a second and may raise to stop waiting
+        (the job itself keeps running at OpenRouter and may still be charged).
+        """
+        job = self._request("POST", "/videos", payload) or {}
+        job_id = job.get("id")
+        if not job_id:
+            raise OpenRouterError("video response has no job id")
+        waited = 0.0
+        while job.get("status") not in ("completed", "failed", "cancelled", "expired"):
+            if waited >= timeout:
+                raise OpenRouterError(f"video job {job_id} not finished after {timeout:.0f} s")
+            for _ in range(int(poll)):
+                if check_cancel:
+                    check_cancel()
+                self._sleep(1.0)
+            waited += poll
+            job = self._request("GET", f"/videos/{job_id}") or {}
+        if job.get("status") != "completed":
+            err = job.get("error")
+            detail = err.get("message") if isinstance(err, dict) else err
+            raise OpenRouterError(f"video job {job.get('status')}: {detail or 'no details'}")
+        data = self._request("GET", f"/videos/{job_id}/content?index=0")
+        if not isinstance(data, bytes) or not data:
+            raise OpenRouterError("video download returned no data")
+        return data, (job.get("usage") or {}).get("cost")
 
     def credits(self):
         """Account credits (``GET /credits``); needs a management key."""

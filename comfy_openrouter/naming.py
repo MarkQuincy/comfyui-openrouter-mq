@@ -47,8 +47,8 @@ def render(pattern, fields, counter):
     return name
 
 
-def save_new(folder, pattern, fields, data):
-    """Write ``data`` to a new ``.png`` in ``folder``; never overwrites. Returns the path."""
+def save_new(folder, pattern, fields, data, ext=".png"):
+    """Write ``data`` to a new file in ``folder``; never overwrites. Returns the path."""
     folder = Path(folder)
     folder.mkdir(parents=True, exist_ok=True)
     has_counter = "{counter}" in pattern
@@ -56,7 +56,7 @@ def save_new(folder, pattern, fields, data):
         name = render(pattern, fields, counter)
         if not has_counter and counter > 1:
             name = f"{name}_{counter:03d}"
-        path = folder / f"{name}.png"
+        path = folder / f"{name}{ext}"
         try:
             with open(path, "xb") as fh:  # "x" fails if the file exists
                 fh.write(data)
