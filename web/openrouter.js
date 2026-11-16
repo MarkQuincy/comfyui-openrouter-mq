@@ -78,6 +78,41 @@ async function loadVoices(node) {
   redraw();
 }
 
+// Speak node: "language filter" narrows the model dropdown to models that suit the
+// language (data from the server: description words + user/languages.json).
+async function applyLanguage(node, code) {
+  const model = node.widgets?.find((w) => w.name === "model");
+  if (!model) return;
+  try {
+    const url = `/openrouter/speech_models?language=${encodeURIComponent(code)}`;
+    const data = await (await api.fetchApi(url)).json();
+    const labels = data.labels.length ? data.labels : ["(no model for this language)"];
+    model.options = { ...model.options, values: labels }; // own copy, not shared
+    const bare = (s) => String(s).replace(" · multilingual", "").replace(/^★ /, "");
+    const match = labels.find((l) => bare(l) === bare(model.value));
+    model.value = match ?? labels[0];
+    await loadVoices(node);
+  } catch (err) {
+    console.warn("[OpenRouter] language filter failed", err);
+  }
+  redraw();
+}
+
+async function addLanguagePicker(node) {
+  const names = { "All languages": "all" };
+  const picker = node.addWidget("combo", "language filter", "All languages",
+    (name) => applyLanguage(node, names[name] || "all"),
+    { values: ["All languages"], serialize: false });
+  picker.serialize = false;
+  try {
+    const data = await (await api.fetchApi("/openrouter/speech_models?language=all")).json();
+    for (const lang of data.languages) names[lang.name] = lang.code;
+    picker.options.values = data.languages.map((l) => l.name);
+  } catch (err) {
+    console.warn("[OpenRouter] languages unavailable", err);
+  }
+}
+
 function addVoicePicker(node) {
   const picker = node.addWidget("combo", "voice list", "(model default)", (label) => {
     const voice = node.widgets.find((w) => w.name === "voice");
@@ -135,7 +170,10 @@ app.registerExtension({
       const result = onNodeCreated?.apply(this, arguments);
       // Added after the real widgets and not serialized, so saved workflows keep
       // their widget order.
-      if (nodeData.name === "OpenRouterSpeak") addVoicePicker(this);
+      if (nodeData.name === "OpenRouterSpeak") {
+        addLanguagePicker(this);
+        addVoicePicker(this);
+      }
       this.addCustomWidget(statusWidget(this));
       const balanceBtn = this.addWidget("button", "refresh balance", null, () => loadBalance());
       const modelsBtn = this.addWidget("button", "refresh models", null, () => refreshModels());

@@ -2,6 +2,7 @@
 
 GET  /openrouter/balance         -> balance.balance_payload()
 GET  /openrouter/voices?model=…   -> voices.voices_payload()
+GET  /openrouter/speech_models?language=… -> languages.speech_models_payload()
 POST /openrouter/refresh_models  -> balance.refresh_models_payload()
 
 The OpenRouter calls block, so they run in a worker thread.
@@ -10,7 +11,7 @@ The OpenRouter calls block, so they run in a worker thread.
 import asyncio
 import logging
 
-from . import balance, voices
+from . import balance, languages, voices
 
 log = logging.getLogger("comfyui-openrouter")
 
@@ -40,5 +41,10 @@ def register():
     async def get_voices(request):
         model = request.query.get("model", "")
         return web.json_response(voices.voices_payload(model))
+
+    @routes.get("/openrouter/speech_models")
+    async def get_speech_models(request):
+        language = request.query.get("language", languages.ALL)
+        return web.json_response(languages.speech_models_payload(language))
 
     return True

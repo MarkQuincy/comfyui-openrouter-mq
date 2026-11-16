@@ -102,7 +102,14 @@ frame, so it links back to the portrait it was made from.
   (empty if the model lists none) and fills in **voice** when you pick one.
   ♂/♀ marks come from your own `user\voices.json` (e.g. `{"rex": "male"}`), a gender
   given by the provider, or a clear naming rule (Kokoro `af_…` = female, `am_…` = male).
-  Voices without a mark are simply unknown, not guessed. `format` `pcm` is saved as `.wav` (assumed 24 kHz mono); `mp3` needs
+  Voices without a mark are simply unknown, not guessed.
+  The **language filter** (at the bottom of the node) narrows the **model** dropdown to
+  models for that language. OpenRouter has no language field, so a model matches when
+  its description names the language, or when you list it in `user\languages.json`
+  (e.g. `{"speechify/simba-3.5": ["ru", "en"]}`). Models that only say "multilingual" or
+  "48 languages" match every language and show `· multilingual`. The filter is a helper
+  and is not saved with the workflow.
+  `format` `pcm` is saved as `.wav` (assumed 24 kHz mono); `mp3` needs
   torchaudio with mp3 support for the AUDIO output (the file is saved either way).
   OpenRouter does not report speech cost, so it shows as unknown.
 - **Video**: connect a Generate image to `first_frame` (and optionally `last_frame`).
@@ -118,6 +125,9 @@ Created next to the node in `user\` on first run:
 - `settings.json` — `filename_pattern`, default
   `{date}_{project}_{person}_{name}_{model}_{counter}`.
 - `voices.json` — your ♂/♀ marks for voices, e.g. `{"rex": "male", "eve": "female"}`.
+- `languages.json` — languages of speech models for the filter, e.g.
+  `{"speechify/simba-3.5": ["ru", "en"]}` (language codes: en, ru, uk, de, fr, es, it,
+  pt, pl, tr, ar, hi, zh, ja, ko).
 - `models_cache.json`, `video_models_cache.json`, `speech_models_cache.json` — the last
   model lists (let ComfyUI start offline).
 

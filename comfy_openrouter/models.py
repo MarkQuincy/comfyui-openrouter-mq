@@ -119,10 +119,15 @@ def label(model_id, favorites=()):
     return STAR + text if model_id in set(favorites) else text
 
 
+MULTI_MARK = " · multilingual"  # added by the Speak language filter
+
+
 def id_from_label(text):
     """Inverse of ``label`` (also accepts a plain model id)."""
     if text.startswith(STAR):
         text = text[len(STAR):]
+    if text.endswith(MULTI_MARK):
+        text = text[:-len(MULTI_MARK)]
     return text.replace(" / ", "/", 1)
 
 
