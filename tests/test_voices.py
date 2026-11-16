@@ -47,10 +47,12 @@ def test_model_without_voices():
 def test_payload_from_cache_by_label(tmp_path):
     cache = tmp_path / "speech.json"
     model_list.save_cache([MODEL], cache)
-    data = v.voices_payload("kokoro / tts", cache_path=cache, marks_path=tmp_path / "m.json")
+    data = v.voices_payload("kokoro / tts", cache_path=cache, marks_path=tmp_path / "m.json",
+                             lists_path=tmp_path / "l.json")
     assert data["labels"][:3] == ["(model default)", "♀ af_bella", "♂ am_adam"]
     assert data["ids"][:3] == ["", "af_bella", "am_adam"]
-    unknown = v.voices_payload("nope / none", cache_path=cache, marks_path=tmp_path / "m.json")
+    unknown = v.voices_payload("nope / none", cache_path=cache, marks_path=tmp_path / "m.json",
+                             lists_path=tmp_path / "l.json")
     assert unknown == {"labels": ["(model default)"], "ids": [""]}
 
 
@@ -58,3 +60,36 @@ def test_js_has_voice_picker():
     js = (Path(__file__).resolve().parent.parent / "web" / "openrouter.js").read_text(
         encoding="utf-8")
     assert "/openrouter/voices?model=" in js and '"voice list"' in js
+
+
+def test_builtin_elevenlabs_voices_when_openrouter_lists_none():
+    voices = v.voice_list({"id": "elevenlabs/eleven-v4"})
+    names = [x["id"] for x in voices]
+    assert len(names) == 21 and names[0] == "george"
+    assert v.label(voices[0]) == "♂ george" and v.label(voices[1]) == "♀ sarah"
+    assert v.label(next(x for x in voices if x["id"] == "river")) == "river"  # neutral
+
+
+def test_users_voice_list_beats_builtin_and_marks_still_apply(tmp_path):
+    path = tmp_path / "model_voices.json"
+    assert v.load_model_voices(path) == {}  # created on first use
+    path.write_text('{"elevenlabs/eleven-v4": ["my-clone"], "acme/": ["a", 5]}',
+                    encoding="utf-8")
+    lists = v.load_model_voices(path)
+    assert lists == {"elevenlabs/eleven-v4": ["my-clone"], "acme/": ["a"]}
+    assert v.voice_list({"id": "elevenlabs/eleven-v4"}, user_lists=lists) == [
+        {"id": "my-clone", "gender": None}]
+    assert v.voice_list({"id": "acme/tts-2"}, {"a": "female"}, lists) == [
+        {"id": "a", "gender": "female"}]
+
+
+def test_supported_voices_win_over_fallback():
+    model = {"id": "elevenlabs/new", "supported_voices": ["x"]}
+    assert [x["id"] for x in v.voice_list(model)] == ["x"]
+
+
+def test_payload_for_model_missing_from_cache_uses_builtin(tmp_path):
+    data = v.voices_payload("elevenlabs / eleven-v4 · multilingual",
+                            cache_path=tmp_path / "none.json", marks_path=tmp_path / "m.json",
+                            lists_path=tmp_path / "l.json")
+    assert data["ids"][:2] == ["", "george"] and data["labels"][1] == "♂ george"

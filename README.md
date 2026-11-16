@@ -99,7 +99,10 @@ frame, so it links back to the portrait it was made from.
   default voice. Voice names differ per model (`alloy` works only for OpenAI); if a name
   is wrong, the error message lists the valid voices for that model.
   The **voice list** dropdown shows the voices OpenRouter lists for the selected model
-  (empty if the model lists none) and fills in **voice** when you pick one.
+  and fills in **voice** when you pick one. When OpenRouter lists none, it uses your
+  `user\model_voices.json` (`{"model id": ["voice", …]}`, or a prefix like
+  `"elevenlabs/"`), else a built-in list (ElevenLabs: george, sarah, … from its
+  openrouter.ai page).
   ♂/♀ marks come from your own `user\voices.json` (e.g. `{"rex": "male"}`), a gender
   given by the provider, or a clear naming rule (Kokoro `af_…` = female, `am_…` = male).
   Voices without a mark are simply unknown, not guessed.
@@ -128,6 +131,8 @@ Created next to the node in `user\` on first run:
 - `settings.json` — `filename_pattern`, default
   `{date}_{project}_{person}_{name}_{model}_{counter}`.
 - `voices.json` — your ♂/♀ marks for voices, e.g. `{"rex": "male", "eve": "female"}`.
+- `model_voices.json` — voice names for models OpenRouter lists none for, e.g.
+  `{"some/tts-model": ["anna", "boris"]}` or a prefix `{"provider/": [...]}`.
 - `languages.json` — languages of speech models for the filter, e.g.
   `{"speechify/simba-3.5": ["ru", "en"]}` (language codes: en, ru, uk, de, fr, es, it,
   pt, pl, tr, ar, hi, zh, ja, ko).
