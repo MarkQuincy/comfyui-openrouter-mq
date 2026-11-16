@@ -9,7 +9,7 @@ keywords = ["comfyui", "openrouter", "image-generation", "ai-generated"]
 dependencies = []
 
 [project.urls]
-Repository = "https://github.com/MarkQuincy/comfyui-openrouter"
+Repository = "https://github.com/MarkQuincy/comfy-openrouter-mq"
 
 [dependency-groups]
 dev = ["pytest"]
