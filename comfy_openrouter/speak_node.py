@@ -66,13 +66,38 @@ def to_comfy_audio(path):
         samples = np.frombuffer(frames, dtype="<i2").astype(np.float32) / 32768.0
         return {"waveform": torch.from_numpy(samples)[None, None], "sample_rate": rate}
     try:
-        import torchaudio
+        samples, rate = decode_with_av(path)  # PyAV ships with recent ComfyUI
+        return {"waveform": torch.from_numpy(samples)[None], "sample_rate": rate}
+    except Exception as av_exc:  # av missing or cannot read the file
+        try:
+            import torchaudio
 
-        waveform, rate = torchaudio.load(str(path))
-    except Exception as exc:  # torchaudio missing or no mp3 backend
-        raise RuntimeError(f"Saved {path.name}, but cannot load mp3 for the AUDIO output "
-                           f"({exc}). Use format 'pcm' instead.") from exc
+            waveform, rate = torchaudio.load(str(path))
+        except Exception as exc:  # torchaudio missing or no mp3 backend (torchcodec)
+            raise RuntimeError(f"Saved {path.name}, but cannot load mp3 for the AUDIO output "
+                               f"(PyAV: {av_exc}; torchaudio: {exc}). Use format 'pcm' "
+                               f"instead.") from exc
     return {"waveform": waveform[None], "sample_rate": rate}
+
+
+def decode_with_av(path):
+    """Audio file -> (float32 array [channels, samples], sample_rate) via PyAV."""
+    import av
+    import numpy as np
+
+    chunks, rate = [], None
+    with av.open(str(path)) as container:
+        for frame in container.decode(audio=0):
+            rate = frame.sample_rate
+            arr = frame.to_ndarray()
+            if not frame.format.is_planar:  # packed: [1, samples * channels]
+                arr = arr.reshape(-1, len(frame.layout.channels)).T
+            if arr.dtype.kind == "i":
+                arr = arr.astype(np.float32) / float(np.iinfo(arr.dtype).max + 1)
+            chunks.append(arr.astype(np.float32))
+    if not chunks:
+        raise ValueError("no audio frames")
+    return np.ascontiguousarray(np.concatenate(chunks, axis=1)), rate
 
 
 class OpenRouterSpeak:
