@@ -70,26 +70,6 @@ def save_video(data, info, prompt, context, name, folder, pattern, node_id=None,
                                      ".mp4", meta, "video")
 
 
-def model_info_payload(model, cache_path=None):
-    """For the route: limits and prices of a video model from the cache (no network).
-    ``prices`` are the ``pricing_skus`` values as numbers; OpenRouter gives no unit."""
-    models, _ = model_list.get_models(None, cache_path=cache_path, kind="video")
-    info = model_list.find_model(models, model_list.id_from_label(model or "")) or {}
-    prices = {}
-    for sku, value in (info.get("pricing_skus") or {}).items():
-        try:
-            prices[sku] = float(value)
-        except (TypeError, ValueError):
-            continue
-    return {
-        "durations": sorted(d for d in info.get("supported_durations") or []
-                            if isinstance(d, int)),
-        "resolutions": info.get("supported_resolutions") or [],
-        "aspect_ratios": info.get("supported_aspect_ratios") or [],
-        "prices": prices,
-    }
-
-
 def preview_ui(path, temp_dir):
     """Copy the saved video into ComfyUI's temp folder and describe it the way ComfyUI's
     own video nodes do, so the page shows it on the node. The saved file is untouched."""

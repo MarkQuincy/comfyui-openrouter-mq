@@ -210,12 +210,14 @@ https://openrouter.ai/docs/features/multimodal/video-generation
 - **OpenRouter Cost Report** node (owner request): sums `cost_usd` from `.json` recipes
   (and the `openrouter` PNG chunk of older images without one) under a folder, grouped by
   project/person/model/kind/date/author, optional `since` date. Read-only.
-- Video model info on the node (owner request): route `GET /openrouter/video_model?model=`
-  (cache only) returns supported durations/resolutions/aspect ratios and `pricing_skus` as
-  numbers. JS shows lengths, resolutions, price range and "estimate = price range ×
-  duration" (assumes per-second pricing; units are not in the API). Duration widget max =
+- Video model info on the node (owner request): route
+  `GET /openrouter/video_model?model=&resolution=&duration=&audio=` (cache only) returns
+  display lines + allowed durations from `video_cost.info_lines`. Real data (Seedance 2.0
+  Fast): `pricing_skus` = `video_tokens`, `video_tokens_without_audio`,
+  `video_tokens_with_video_input` (USD per token). Seedance rule: tokens = w×h×24×s/1024
+  (480p = 854×480 → $0.04035/s, matches openrouter.ai). Token SKUs for other models →
+  no estimate; non-token SKUs → shown as "per s (assumed unit)". Duration widget max =
   longest allowed length; a non-allowed value snaps to the nearest allowed one.
-  Exact per-tier estimate pending real `pricing_skus` key names.
 - Not in scope: ComfyUI VIDEO output type, Transcribe node, audio/video references,
   editing/extending a video (`previous_job_id`).
 Check: tests with fake transport (speech bytes, video submit → poll → download,

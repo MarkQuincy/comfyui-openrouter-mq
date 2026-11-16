@@ -153,29 +153,10 @@ function statusWidget(node) {
   };
 }
 
-// Video node: allowed lengths/resolutions of the selected model and a price estimate.
-// OpenRouter gives prices without a unit; video models are priced per second
-// (e.g. Seedance), so the estimate is price x duration and says so.
+// Video node: allowed lengths of the selected model and a cost estimate. The server
+// makes the lines (comfy_openrouter/video_cost.py); this only shows them.
 function videoLines(node) {
-  const d = node.openrouterVideo;
-  if (!d) return ["Model info: loading…"];
-  const durs = d.durations.filter((x) => x > 0);
-  const contiguous = durs.length > 2 && durs[durs.length - 1] - durs[0] === durs.length - 1;
-  const lengths = !durs.length ? "not listed"
-    : contiguous ? `${durs[0]}–${durs[durs.length - 1]} s` : durs.join(", ") + " s";
-  const auto = d.durations.includes(-1) ? " (or auto)" : "";
-  const res = d.resolutions.length ? d.resolutions.join(", ") : "resolutions not listed";
-  const lines = [`Lengths: ${lengths}${auto} · ${res}`];
-  const prices = Object.values(d.prices);
-  if (!prices.length) return [...lines, "Price: not listed for this model"];
-  const lo = Math.min(...prices), hi = Math.max(...prices);
-  const range = (a, b) => (a === b ? `$${a.toFixed(4)}` : `$${a.toFixed(4)}–$${b.toFixed(4)}`);
-  const tiers = prices.length > 1 ? ` (${prices.length} tiers)` : "";
-  lines.push(`Price: ${range(lo, hi)} per s${tiers}`);
-  const secs = node.widgets?.find((w) => w.name === "duration")?.value || 0;
-  lines.push(secs > 0 ? `Estimate for ${secs} s: ≈ ${range(lo * secs, hi * secs)}`
-    : "Duration 0 = model default: set seconds for an estimate");
-  return lines;
+  return node.openrouterVideo?.lines || ["Model info: loading…"];
 }
 
 function videoInfoWidget(node) {
@@ -200,12 +181,15 @@ function videoInfoWidget(node) {
 }
 
 async function loadVideoInfo(node) {
-  const model = node.widgets?.find((w) => w.name === "model")?.value;
-  if (!model) return;
+  const value = (name) => node.widgets?.find((w) => w.name === name)?.value;
+  if (!value("model")) return;
+  const query = new URLSearchParams({
+    model: value("model"), resolution: value("resolution") || "auto",
+    duration: String(value("duration") || 0), audio: value("generate_audio") || "auto",
+  });
   try {
-    const url = `/openrouter/video_model?model=${encodeURIComponent(model)}`;
-    node.openrouterVideo = await (await api.fetchApi(url)).json();
-    const durs = node.openrouterVideo.durations.filter((x) => x > 0);
+    node.openrouterVideo = await (await api.fetchApi(`/openrouter/video_model?${query}`)).json();
+    const durs = node.openrouterVideo.durations || [];
     const duration = node.widgets.find((w) => w.name === "duration");
     if (duration && durs.length) {
       duration.options = { ...duration.options, max: durs[durs.length - 1] };
@@ -213,24 +197,24 @@ async function loadVideoInfo(node) {
         // Nearest allowed length, so the estimate matches what will be sent.
         duration.value = durs.reduce((a, b) =>
           Math.abs(b - duration.value) < Math.abs(a - duration.value) ? b : a);
+        return loadVideoInfo(node);
       }
     }
   } catch (err) {
-    node.openrouterVideo = { durations: [], resolutions: [], aspect_ratios: [], prices: {} };
+    node.openrouterVideo = { lines: ["Model info unavailable"], durations: [] };
   }
   node.setSize([node.size[0], node.computeSize()[1]]);
   redraw();
 }
 
 function hookVideo(node) {
-  for (const name of ["model", "duration"]) {
+  for (const name of ["model", "resolution", "duration", "generate_audio"]) {
     const w = node.widgets?.find((x) => x.name === name);
     if (!w) continue;
     const callback = w.callback;
     w.callback = function () {
       const r = callback?.apply(this, arguments);
-      if (name === "model") loadVideoInfo(node);
-      else redraw();
+      loadVideoInfo(node);
       return r;
     };
   }

@@ -127,9 +127,12 @@ speech) are counted and marked "without cost".
   torchaudio with mp3 support for the AUDIO output (the file is saved either way).
   OpenRouter does not report speech cost, so it shows as unknown.
 - **Video**: when you pick a model, the node shows its allowed lengths and resolutions,
-  its price range and an estimate for the chosen **duration** (price × seconds; OpenRouter
-  lists prices without a unit, and video models are priced per second). The duration
-  field is limited to the model's longest length.
+  its price per second and an estimate for the chosen **duration**, **resolution** and
+  **generate_audio**. Seedance models are priced per video token
+  (width × height × 24 fps × seconds / 1024), which matches OpenRouter's advertised
+  price. Plain prices are shown "per s (assumed unit)"; token-priced models with an
+  unknown rule show no estimate. The duration field is limited to the model's longest
+  length. Check the real cost afterwards on the node or in the Cost Report.
   Connect a Generate image to `first_frame` (and optionally `last_frame`).
   `duration` 0 = model default; values the model does not support are not sent
   (console warning). A job takes from 30 s to several minutes; the node waits and stops
