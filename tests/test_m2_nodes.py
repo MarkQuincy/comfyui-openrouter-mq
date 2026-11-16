@@ -121,7 +121,7 @@ def test_find_model_from_cache_then_refresh(user_dir):
     assert fake.calls == []  # found in cache, no fetch
     assert g.find_model("fake/text-only", client_with(fake))["id"] == "fake/text-only"
     assert len(fake.calls) == 1  # not in cache -> one refresh
-    with pytest.raises(ValueError, match="not found"):
+    with pytest.raises(ValueError, match="not in the image model list .2 models.. Press .refresh models."):
         g.find_model("nope/none", client_with(fake))
 
 

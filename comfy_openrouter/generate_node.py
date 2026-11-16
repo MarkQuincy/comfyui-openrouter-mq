@@ -51,7 +51,9 @@ def find_model(model_id, client, kind="image"):
             log.warning("[OpenRouter] %s", error)
         info = model_list.find_model(models, model_id)
     if info is None:
-        raise ValueError(f"OpenRouter model {model_id!r} not found in the model list")
+        raise ValueError(f"OpenRouter {kind} model {model_id!r} is not in the {kind} model "
+                         f"list ({len(models)} models). Press 'refresh models', then pick a "
+                         f"model from the dropdown.")
     return info
 
 
