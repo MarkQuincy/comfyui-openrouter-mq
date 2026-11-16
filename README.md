@@ -9,7 +9,7 @@ author, project, person, references, workflow) inside the PNG.
 > real ComfyUI on Windows, and the code has automated tests, but please review it
 > before relying on it.
 
-Version 1.1.0 (beta: speech, video, JSON recipes). Design notes: `SPEC.md`. License: MIT.
+Version 1.1.0 (images, speech, video, JSON recipes, cost report). Design notes: `SPEC.md`. License: MIT.
 
 ![OpenRouter nodes in ComfyUI: a reference photo and a prompt go into OpenRouter Generate, which returns a full-body studio portrait and shows the run's cost](docs/screenshot.png)
 
@@ -173,6 +173,11 @@ For the next person: copy the nodes (Ctrl+C / Ctrl+V), change Context, prompt an
 - **Model dropdown says "no models"**: the key was not set when ComfyUI started. Set it,
   restart ComfyUI fully, then press **refresh models**.
 - **"no credits left or key limit reached"**: top up on OpenRouter or raise the key limit.
+- **New settings don't appear after an update**: reload the page with **Ctrl+F5** (the
+  browser may keep the old script).
+- **A Speak node from a 1.1.0 beta workflow shows wrong values** (e.g. voice `mp3`): the
+  **language** setting was added at the top, so older Speak nodes load shifted. Delete the
+  node and add it again.
 - **Node does not appear**: check the ComfyUI console for `comfyui_openrouter` and
   `IMPORT FAILED`.
 
