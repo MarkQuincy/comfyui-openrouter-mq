@@ -3,8 +3,9 @@
 import io
 import wave
 
-from . import metadata
+from . import languages, metadata
 from . import models as model_list
+from .client import OpenRouterError
 from .generate_node import (NO_MODELS, current_prompt_id, file_fields, find_model, info_text,
                             log, make_client, model_choices, output_dir, ui_payload)
 from .naming import load_settings
@@ -27,7 +28,15 @@ def speak(client, model_info, text, settings):
         payload["speed"] = settings["speed"]
     if settings["instructions"].strip():
         payload["instructions"] = settings["instructions"].strip()
-    audio = client.speech(payload)
+    try:
+        audio = client.speech(payload)
+    except OpenRouterError as exc:
+        if "voice" not in payload and exc.status == 400 and "voice" in str(exc).lower():
+            raise OpenRouterError(
+                f"{exc}. {model_info['id']} has no default voice and OpenRouter lists no "
+                f"voices for it: type a voice name from the model's page on openrouter.ai.",
+                status=exc.status) from exc
+        raise
     params = {k: v for k, v in payload.items() if k not in ("model", "input")}
     # shortcut: speech responses carry no cost; it would need GET /generation by id.
     info = {"model": model_info["id"], "cost_usd": None, "seed": None, "params": params,
@@ -112,6 +121,8 @@ class OpenRouterSpeak:
         return {
             "required": {
                 "text": ("STRING", {"forceInput": True}),
+                # Only filters the model dropdown in the browser (web/openrouter.js).
+                "language": (languages.choices(), {"default": languages.ALL_NAME}),
                 "model": (model_choices(make_client(), "speech"),),
                 "voice": ("STRING", {"default": "", "tooltip":
                           "Empty = the model's default voice. Names depend on the model; "
@@ -134,7 +145,8 @@ class OpenRouterSpeak:
             return "No OpenRouter speech models: set OPENROUTER_API_KEY, then refresh models"
         return True
 
-    def run(self, text, model, voice, format, speed, instructions, name, context=None,
+    def run(self, text, model, voice, format, speed, instructions, name, language=None,
+            context=None,
             folder="", unique_id=None):
         client = make_client()
         if client is None:

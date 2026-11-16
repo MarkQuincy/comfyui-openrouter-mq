@@ -234,3 +234,21 @@ def test_urllib_transport_returns_bytes_for_audio():
     finally:
         server.shutdown()
         server.server_close()
+
+
+def test_speak_explains_missing_voice():
+    class NeedsVoice(FakeTransport):
+        def __call__(self, method, url, headers, body, timeout):
+            if url.endswith("/audio/speech"):
+                return 400, {"error": {"message": "An explicit voice is required"}}
+            return super().__call__(method, url, headers, body, timeout)
+
+    settings = {**SPEAK, "voice": ""}
+    with pytest.raises(OpenRouterError, match="openrouter.ai") as info:
+        s.speak(client_with(NeedsVoice()), SPEECH, "Hi", settings)
+    assert "fake/tts-1 has no default voice" in str(info.value)
+
+
+def test_speak_language_widget_is_first(no_models):
+    required = list(s.OpenRouterSpeak.INPUT_TYPES()["required"])
+    assert required[:3] == ["text", "language", "model"]

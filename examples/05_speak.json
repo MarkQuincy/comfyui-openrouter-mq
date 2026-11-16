@@ -132,6 +132,7 @@
         "Node name for S&R": "OpenRouterSpeak"
       },
       "widgets_values": [
+        "All languages",
         "openai / gpt-4o-mini-tts-2025-12-15",
         "",
         "mp3",

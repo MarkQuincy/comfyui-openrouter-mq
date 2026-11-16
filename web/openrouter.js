@@ -78,7 +78,7 @@ async function loadVoices(node) {
   redraw();
 }
 
-// Speak node: "language filter" narrows the model dropdown to models that suit the
+// Speak node: the "language" widget narrows the model dropdown to models that suit the
 // language (data from the server: description words + user/languages.json).
 async function applyLanguage(node, code) {
   const model = node.widgets?.find((w) => w.name === "model");
@@ -98,19 +98,16 @@ async function applyLanguage(node, code) {
   redraw();
 }
 
-async function addLanguagePicker(node) {
-  const names = { "All languages": "all" };
-  const picker = node.addWidget("combo", "language filter", "All languages",
-    (name) => applyLanguage(node, names[name] || "all"),
-    { values: ["All languages"], serialize: false });
-  picker.serialize = false;
-  try {
-    const data = await (await api.fetchApi("/openrouter/speech_models?language=all")).json();
-    for (const lang of data.languages) names[lang.name] = lang.code;
-    picker.options.values = data.languages.map((l) => l.name);
-  } catch (err) {
-    console.warn("[OpenRouter] languages unavailable", err);
-  }
+// The Speak node's own "language" widget (saved with the workflow) filters the model list.
+function hookLanguage(node) {
+  const lang = node.widgets?.find((w) => w.name === "language");
+  if (!lang) return;
+  const callback = lang.callback;
+  lang.callback = function (value) {
+    const r = callback?.apply(this, arguments);
+    applyLanguage(node, value);
+    return r;
+  };
 }
 
 function addVoicePicker(node) {
@@ -171,7 +168,7 @@ app.registerExtension({
       // Added after the real widgets and not serialized, so saved workflows keep
       // their widget order.
       if (nodeData.name === "OpenRouterSpeak") {
-        addLanguagePicker(this);
+        hookLanguage(this);
         addVoicePicker(this);
       }
       this.addCustomWidget(statusWidget(this));
@@ -188,7 +185,10 @@ app.registerExtension({
       const onConfigure = nodeType.prototype.onConfigure;
       nodeType.prototype.onConfigure = function () {
         const r = onConfigure?.apply(this, arguments);
-        loadVoices(this); // a loaded workflow sets the model after creation
+        // A loaded workflow sets language/model after creation: re-apply the filter.
+        const lang = this.widgets?.find((w) => w.name === "language")?.value;
+        if (lang && lang !== "All languages") applyLanguage(this, lang);
+        else loadVoices(this);
         return r;
       };
     }

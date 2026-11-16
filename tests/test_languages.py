@@ -51,9 +51,8 @@ def test_payload_from_cache(tmp_path, monkeypatch):
     monkeypatch.setattr(model_list, "load_favorites", lambda: [])
     cache = tmp_path / "speech.json"
     model_list.save_cache(MODELS, cache)
-    data = lang.speech_models_payload("en", cache_path=cache, map_path=tmp_path / "l.json")
-    assert data["languages"][0] == {"code": "all", "name": "All languages"}
-    assert {"code": "ru", "name": "Russian (ru)"} in data["languages"]
+    data = lang.speech_models_payload("English (en)", cache_path=cache,
+                                      map_path=tmp_path / "l.json")
     assert data["labels"] == ["acme / en-only", "acme / ru-voice", "acme / russet",
                               "speechify / simba-3.5 · multilingual"]
 
@@ -61,4 +60,21 @@ def test_payload_from_cache(tmp_path, monkeypatch):
 def test_js_has_language_filter():
     js = (Path(__file__).resolve().parent.parent / "web" / "openrouter.js").read_text(
         encoding="utf-8")
-    assert "/openrouter/speech_models?language=" in js and '"language filter"' in js
+    assert "/openrouter/speech_models?language=" in js and "hookLanguage" in js
+
+
+def test_users_file_overrides_description():
+    # AssemblyAI says "multilingual" but the user found it cannot speak Russian.
+    model = {"id": "assemblyai/tts-1", "description": "Multilingual TTS"}
+    assert lang.filtered_labels([model], "ru") == ["assemblyai / tts-1 · multilingual"]
+    assert lang.filtered_labels([model], "ru", lang_map={"assemblyai/tts-1": ["en"]}) == []
+    english = lang.filtered_labels([model], "en", lang_map={"assemblyai/tts-1": ["en"]})
+    assert english == ["assemblyai / tts-1"]
+
+
+def test_widget_choices():
+    assert lang.choices()[0] == "All languages" and "Russian (ru)" in lang.choices()
+    assert lang.code_from_choice("Russian (ru)") == "ru"
+    assert lang.code_from_choice("ru") == "ru"
+    assert lang.code_from_choice("All languages") == "all"
+    assert lang.code_from_choice("Klingon (tlh)") == "all"

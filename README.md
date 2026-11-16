@@ -103,12 +103,15 @@ frame, so it links back to the portrait it was made from.
   ♂/♀ marks come from your own `user\voices.json` (e.g. `{"rex": "male"}`), a gender
   given by the provider, or a clear naming rule (Kokoro `af_…` = female, `am_…` = male).
   Voices without a mark are simply unknown, not guessed.
-  The **language filter** (at the bottom of the node) narrows the **model** dropdown to
-  models for that language. OpenRouter has no language field, so a model matches when
-  its description names the language, or when you list it in `user\languages.json`
-  (e.g. `{"speechify/simba-3.5": ["ru", "en"]}`). Models that only say "multilingual" or
-  "48 languages" match every language and show `· multilingual`. The filter is a helper
-  and is not saved with the workflow.
+  **language** (the first setting) narrows the **model** dropdown to models for that
+  language and is saved with the workflow. OpenRouter has no language field, so a model
+  matches when its description names the language; models that only say "multilingual"
+  or "48 languages" match every language and show `· multilingual` (unconfirmed).
+  `user\languages.json` has the final say: a model listed there gets exactly the listed
+  languages, e.g. `{"speechify/simba-3.5": ["ru", "en"], "assemblyai/assemblyai-tts-1":
+  ["en"]}`. Add models there once you know which really speak your language.
+  Some providers (e.g. ElevenLabs) need a voice name and OpenRouter lists none for them;
+  take the voice name from the model's page on openrouter.ai.
   `format` `pcm` is saved as `.wav` (assumed 24 kHz mono); `mp3` needs
   torchaudio with mp3 support for the AUDIO output (the file is saved either way).
   OpenRouter does not report speech cost, so it shows as unknown.

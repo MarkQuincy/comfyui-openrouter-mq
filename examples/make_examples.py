@@ -56,7 +56,7 @@ class Workflow:
                           inputs=GENERATE_INPUTS, outputs=GENERATE_OUTPUTS, title=title)
 
     def speak(self, pos, name, model=SPEECH_MODEL):
-        widgets = [model, "", "mp3", 1.0, "", name, ""]
+        widgets = ["All languages", model, "", "mp3", 1.0, "", name, ""]
         return self._node("OpenRouterSpeak", pos, (360, 330), widgets,
                           inputs=[("text", "STRING"), ("context", "OR_CONTEXT")],
                           outputs=[("audio", "AUDIO"), ("info", "STRING")])

@@ -49,8 +49,11 @@ def load_map(path=LANGUAGES_FILE):
 
 
 def model_languages(model, lang_map=None):
-    """``(set of codes, multilingual)`` for one speech model."""
-    codes = set((lang_map or {}).get(model.get("id"), []))
+    """``(set of codes, multilingual)`` for one speech model. A model listed in the
+    user's file gets exactly those languages (it overrides the description)."""
+    if model.get("id") in (lang_map or {}):
+        return set(lang_map[model["id"]]), False
+    codes = set()
     text = f"{model.get('name', '')} {model.get('description', '')}".lower()
     for code, (_, words) in LANGUAGES.items():
         if any(re.search(rf"\b{w}\b", text) for w in words):
@@ -76,13 +79,24 @@ def filtered_labels(models, language, favorites=(), lang_map=None):
             for lab in labels]
 
 
+ALL_NAME = "All languages"
+
+
+def choices():
+    """Values of the Speak node's ``language`` widget."""
+    return [ALL_NAME] + [f"{n} ({c})" for c, (n, _) in LANGUAGES.items()]
+
+
+def code_from_choice(choice):
+    """``"Russian (ru)"`` or ``"ru"`` -> ``"ru"``; anything else -> ``all``."""
+    match = re.search(r"\((\w+)\)$", choice or "")
+    code = match.group(1) if match else (choice or "")
+    return code if code in LANGUAGES else ALL
+
+
 def speech_models_payload(language=ALL, cache_path=None, map_path=LANGUAGES_FILE):
-    """For the route: languages for the filter and the matching model labels (cache only)."""
+    """For the route: model labels that suit the language (code or widget choice)."""
     models, _ = model_list.get_models(None, cache_path=cache_path, kind="speech")
-    labels = filtered_labels(models, language or ALL, model_list.load_favorites(),
+    labels = filtered_labels(models, code_from_choice(language), model_list.load_favorites(),
                              load_map(map_path))
-    return {
-        "languages": [{"code": ALL, "name": "All languages"}] +
-                     [{"code": c, "name": f"{n} ({c})"} for c, (n, _) in LANGUAGES.items()],
-        "labels": labels,
-    }
+    return {"labels": labels}

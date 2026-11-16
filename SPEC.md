@@ -188,12 +188,15 @@ https://openrouter.ai/docs/features/multimodal/video-generation
   sent (warning). Saves `.mp4`; outputs the file path (STRING) + info.
   `refs` in the recipe = pixel hashes of the frames sent, so a video links back to
   the portrait it was made from.
-- Speak language filter (owner request): JS "language filter" combo (not saved) narrows
-  the model dropdown via `GET /openrouter/speech_models?language=` (cache only). Match =
-  description names the language, or `user/languages.json` lists it; "multilingual" /
-  "N languages" descriptions match all languages with the label suffix `· multilingual`
-  (stripped by `id_from_label`). Placed after the real widgets so saved workflows keep
-  their widget positions.
+- Speak language filter (owner request): `language` widget, first on the node and saved
+  (backend ignores it); JS narrows the model dropdown via
+  `GET /openrouter/speech_models?language=` (cache only). A model listed in
+  `user/languages.json` gets exactly those languages (overrides the description);
+  otherwise description names the language, or "multilingual" / "N languages" matches all
+  languages with the label suffix `· multilingual` (stripped by `id_from_label`).
+  Breaking: Speak nodes saved before this change load with shifted widget values.
+- Speak error for providers that require a voice when none is set: points to the model's
+  page on openrouter.ai.
 - Speak voice dropdown (owner request): JS "voice list" combo on the Speak node with the
   selected model's `supported_voices` (route `GET /openrouter/voices?model=`, cache
   only); picking fills the `voice` text widget (the saved value). ♂/♀ from
