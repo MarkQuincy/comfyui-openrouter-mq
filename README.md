@@ -11,6 +11,12 @@ author, project, person, references, workflow) inside the PNG.
 
 Version 1.0.0. Design notes: `SPEC.md`. License: MIT.
 
+![OpenRouter nodes in ComfyUI: a reference photo and a prompt go into OpenRouter Generate, which returns a full-body studio portrait and shows the run's cost](docs/screenshot.png)
+
+*A reference photo and a prompt go into **OpenRouter Generate**; the result is saved
+automatically with its recipe, the node shows the run's cost and your balance, and the
+image can go on to any other node (here: background removal).*
+
 ## Nodes
 | Node | What it does |
 |---|---|
