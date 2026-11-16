@@ -22,7 +22,7 @@
         "Node name for S&R": "Note"
       },
       "widgets_values": [
-        "Text to speech. The audio is saved (mp3, or wav for 'pcm') with a JSON recipe next to it, and goes to Preview Audio.\nVoices depend on the model (e.g. alloy, nova for OpenAI)."
+        "Text to speech. The audio is saved (mp3, or wav for 'pcm') with a JSON recipe next to it, and goes to Preview Audio.\nPick a model from the dropdown. Leave voice empty for the model's default voice; voice names depend on the model (a wrong name returns the list of valid ones)."
       ]
     },
     {
@@ -133,7 +133,7 @@
       },
       "widgets_values": [
         "openai / gpt-4o-mini-tts-2025-12-15",
-        "alloy",
+        "",
         "mp3",
         1.0,
         "",

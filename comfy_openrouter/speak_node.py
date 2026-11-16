@@ -88,7 +88,9 @@ class OpenRouterSpeak:
             "required": {
                 "text": ("STRING", {"forceInput": True}),
                 "model": (model_choices(make_client(), "speech"),),
-                "voice": ("STRING", {"default": "alloy"}),
+                "voice": ("STRING", {"default": "", "tooltip":
+                          "Empty = the model's default voice. Names depend on the model; "
+                          "a wrong name returns an error listing the valid voices."}),
                 "format": (FORMATS, {"default": "mp3"}),
                 "speed": ("FLOAT", {"default": 1.0, "min": 0.25, "max": 4.0, "step": 0.05}),
                 "instructions": ("STRING", {"default": "", "multiline": True}),

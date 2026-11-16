@@ -56,7 +56,7 @@ class Workflow:
                           inputs=GENERATE_INPUTS, outputs=GENERATE_OUTPUTS, title=title)
 
     def speak(self, pos, name, model=SPEECH_MODEL):
-        widgets = [model, "alloy", "mp3", 1.0, "", name, ""]
+        widgets = [model, "", "mp3", 1.0, "", name, ""]
         return self._node("OpenRouterSpeak", pos, (360, 330), widgets,
                           inputs=[("text", "STRING"), ("context", "OR_CONTEXT")],
                           outputs=[("audio", "AUDIO"), ("info", "STRING")])
@@ -163,8 +163,9 @@ def model_comparison():
 def speak_text():
     w = Workflow()
     w.note((40, 40), "Text to speech. The audio is saved (mp3, or wav for 'pcm') with a "
-           "JSON recipe next to it, and goes to Preview Audio.\nVoices depend on the "
-           "model (e.g. alloy, nova for OpenAI).")
+           "JSON recipe next to it, and goes to Preview Audio.\nPick a model from the "
+           "dropdown. Leave voice empty for the model's default voice; voice names "
+           "depend on the model (a wrong name returns the list of valid ones).")
     ctx = w.context((40, 240), "ProjectX", "Ivan Petrov")
     p = w.prompt((420, 40), "Hello! This voice was made with OpenRouter in ComfyUI.")
     sp = w.speak((860, 40), "intro")

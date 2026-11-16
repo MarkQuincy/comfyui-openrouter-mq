@@ -175,8 +175,8 @@ https://openrouter.ai/docs/features/multimodal/video-generation
   (file name) and `file_hash` (`sha256:` of the saved file bytes). For audio/video
   `pixel_hash` is null. The PNG `openrouter` chunk stays `openrouter-meta/1`, unchanged.
 - **OpenRouter Speak** node: `text` (STRING, connected), `context`, widgets `model`
-  (speech models from `GET /models?output_modalities=speech`), `voice` (text, default
-  `alloy`), `format` (`mp3`/`pcm`), `speed`, `instructions`, `name`, `folder`.
+  (speech models from `GET /models?output_modalities=speech`), `voice` (text, empty
+  = model default; not sent when empty), `format` (`mp3`/`pcm`), `speed`, `instructions`, `name`, `folder`.
   `POST /audio/speech` returns raw audio. Saves `.mp3`, or `.wav` for pcm (assumed
   24 kHz 16-bit mono). Outputs ComfyUI `AUDIO` + info. Cost is not in the response → null.
 - **OpenRouter Video** node: `prompt` (STRING, connected), `context`, `first_frame`,

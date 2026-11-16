@@ -95,8 +95,9 @@ e.g. `..._001.png` + `..._001.json` (schema `openrouter-meta/2`: the same fields
 frame, so it links back to the portrait it was made from.
 
 ### Speech and video
-- **Speak**: pick a model and a voice (voices depend on the model, e.g. `alloy`, `nova`
-  for OpenAI). `format` `pcm` is saved as `.wav` (assumed 24 kHz mono); `mp3` needs
+- **Speak**: pick a model from the dropdown. Leave **voice** empty for the model's
+  default voice. Voice names differ per model (`alloy` works only for OpenAI); if a name
+  is wrong, the error message lists the valid voices for that model. `format` `pcm` is saved as `.wav` (assumed 24 kHz mono); `mp3` needs
   torchaudio with mp3 support for the AUDIO output (the file is saved either way).
   OpenRouter does not report speech cost, so it shows as unknown.
 - **Video**: connect a Generate image to `first_frame` (and optionally `last_frame`).
