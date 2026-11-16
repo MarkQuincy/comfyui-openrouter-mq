@@ -252,3 +252,15 @@ def test_speak_explains_missing_voice():
 def test_speak_language_widget_is_first(no_models):
     required = list(s.OpenRouterSpeak.INPUT_TYPES()["required"])
     assert required[:3] == ["text", "language", "model"]
+
+
+def test_video_preview_copies_into_temp(tmp_path):
+    saved = tmp_path / "out" / "clip_001.mp4"
+    saved.parent.mkdir()
+    saved.write_bytes(FAKE_MP4)
+    ui = v.preview_ui(saved, tmp_path / "temp")
+    assert ui == {"images": [{"filename": "openrouter_clip_001.mp4", "subfolder": "",
+                              "type": "temp"}], "animated": [True]}
+    assert (tmp_path / "temp" / "openrouter_clip_001.mp4").read_bytes() == FAKE_MP4
+    assert saved.read_bytes() == FAKE_MP4  # saved file untouched
+    assert v.preview_ui(saved, None) == {}  # outside ComfyUI: no preview

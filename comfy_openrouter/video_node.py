@@ -1,5 +1,8 @@
 """OpenRouter Video node: prompt (+ first/last frame) -> MP4, saved with a JSON recipe."""
 
+import shutil
+from pathlib import Path
+
 from . import metadata
 from . import models as model_list
 from .generate_node import (AUTO, NO_MODELS, SEED_MAX, current_prompt_id, file_fields,
@@ -65,6 +68,27 @@ def save_video(data, info, prompt, context, name, folder, pattern, node_id=None,
                           prompt_id=prompt_id)
     return metadata.save_with_recipe(folder, pattern, file_fields(info, context, name), data,
                                      ".mp4", meta, "video")
+
+
+def preview_ui(path, temp_dir):
+    """Copy the saved video into ComfyUI's temp folder and describe it the way ComfyUI's
+    own video nodes do, so the page shows it on the node. The saved file is untouched."""
+    if temp_dir is None:
+        return {}
+    temp_dir = Path(temp_dir)
+    temp_dir.mkdir(parents=True, exist_ok=True)
+    name = f"openrouter_{path.name}"
+    shutil.copyfile(path, temp_dir / name)
+    return {"images": [{"filename": name, "subfolder": "", "type": "temp"}],
+            "animated": [True]}
+
+
+def comfy_temp_dir():
+    try:
+        import folder_paths  # ComfyUI module
+    except ImportError:
+        return None
+    return folder_paths.get_temp_directory()
 
 
 def comfy_cancel_check():
@@ -133,4 +157,5 @@ class OpenRouterVideo:
         path = save_video(data, info, prompt, context, name, output_dir(folder),
                           load_settings()["filename_pattern"], unique_id, current_prompt_id())
         log.info("[OpenRouter] saved %s", path)
-        return {"ui": ui_payload(info, [path]), "result": (str(path), info_text(info, [path]))}
+        ui = {**ui_payload(info, [path]), **preview_ui(path, comfy_temp_dir())}
+        return {"ui": ui, "result": (str(path), info_text(info, [path]))}
