@@ -1,0 +1,28 @@
+[project]
+name = "comfyui-openrouter"
+version = "1.0.0"
+description = "ComfyUI nodes for image generation through OpenRouter with your own API key; every image saved with a full recipe in its PNG metadata. AI-generated code."
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.10"
+keywords = ["comfyui", "openrouter", "image-generation", "ai-generated"]
+dependencies = []
+
+[project.urls]
+Repository = "https://github.com/MarkQuincy/comfyui-openrouter"
+
+[dependency-groups]
+dev = ["pytest"]
+
+[tool.uv]
+package = false
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+
+# Comfy Registry (registry.comfy.org). Fill in PublisherId before `comfy node publish`.
+[tool.comfy]
+PublisherId = ""
+DisplayName = "OpenRouter Image Generation"
+Icon = ""
