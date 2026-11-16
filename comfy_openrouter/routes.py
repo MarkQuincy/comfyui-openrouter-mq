@@ -1,6 +1,7 @@
 """HTTP routes on ComfyUI's server, used by ``web/openrouter.js``.
 
 GET  /openrouter/balance         -> balance.balance_payload()
+GET  /openrouter/voices?model=…   -> voices.voices_payload()
 POST /openrouter/refresh_models  -> balance.refresh_models_payload()
 
 The OpenRouter calls block, so they run in a worker thread.
@@ -9,7 +10,7 @@ The OpenRouter calls block, so they run in a worker thread.
 import asyncio
 import logging
 
-from . import balance
+from . import balance, voices
 
 log = logging.getLogger("comfyui-openrouter")
 
@@ -34,5 +35,10 @@ def register():
         if result["error"]:
             log.warning("[OpenRouter] %s", result["error"])
         return web.json_response(result)
+
+    @routes.get("/openrouter/voices")
+    async def get_voices(request):
+        model = request.query.get("model", "")
+        return web.json_response(voices.voices_payload(model))
 
     return True

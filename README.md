@@ -97,7 +97,12 @@ frame, so it links back to the portrait it was made from.
 ### Speech and video
 - **Speak**: pick a model from the dropdown. Leave **voice** empty for the model's
   default voice. Voice names differ per model (`alloy` works only for OpenAI); if a name
-  is wrong, the error message lists the valid voices for that model. `format` `pcm` is saved as `.wav` (assumed 24 kHz mono); `mp3` needs
+  is wrong, the error message lists the valid voices for that model.
+  The **voice list** dropdown shows the voices OpenRouter lists for the selected model
+  (empty if the model lists none) and fills in **voice** when you pick one.
+  ♂/♀ marks come from your own `user\voices.json` (e.g. `{"rex": "male"}`), a gender
+  given by the provider, or a clear naming rule (Kokoro `af_…` = female, `am_…` = male).
+  Voices without a mark are simply unknown, not guessed. `format` `pcm` is saved as `.wav` (assumed 24 kHz mono); `mp3` needs
   torchaudio with mp3 support for the AUDIO output (the file is saved either way).
   OpenRouter does not report speech cost, so it shows as unknown.
 - **Video**: connect a Generate image to `first_frame` (and optionally `last_frame`).
@@ -112,6 +117,7 @@ Created next to the node in `user\` on first run:
   Favorites get a ★ and come first within their company. Press **refresh models** after editing.
 - `settings.json` — `filename_pattern`, default
   `{date}_{project}_{person}_{name}_{model}_{counter}`.
+- `voices.json` — your ♂/♀ marks for voices, e.g. `{"rex": "male", "eve": "female"}`.
 - `models_cache.json`, `video_models_cache.json`, `speech_models_cache.json` — the last
   model lists (let ComfyUI start offline).
 

@@ -49,11 +49,53 @@ async function refreshModels() {
     } else {
       shared.balance = `Models: ${data.count} loaded`;
       if (app.refreshComboInNodes) await app.refreshComboInNodes();
+      for (const node of app.graph?._nodes || []) {
+        if (node.type === "OpenRouterSpeak") loadVoices(node);
+      }
     }
   } catch (err) {
     shared.balance = `Models: error (${err.message || err})`;
   }
   redraw();
+}
+
+// Speak node: a "voice list" dropdown for the selected model. Picking an entry fills
+// the "voice" text widget (the saved value); the list itself is not serialized.
+async function loadVoices(node) {
+  const model = node.widgets?.find((w) => w.name === "model")?.value;
+  const picker = node.widgets?.find((w) => w.name === "voice list");
+  if (!model || !picker) return;
+  try {
+    const url = `/openrouter/voices?model=${encodeURIComponent(model)}`;
+    const data = await (await api.fetchApi(url)).json();
+    picker.options.values = data.labels;
+    node.openrouterVoiceIds = Object.fromEntries(data.labels.map((l, i) => [l, data.ids[i]]));
+    const voice = node.widgets.find((w) => w.name === "voice")?.value || "";
+    picker.value = data.labels[data.ids.indexOf(voice)] ?? data.labels[0];
+  } catch (err) {
+    picker.options.values = ["(voices unavailable)"];
+  }
+  redraw();
+}
+
+function addVoicePicker(node) {
+  const picker = node.addWidget("combo", "voice list", "(model default)", (label) => {
+    const voice = node.widgets.find((w) => w.name === "voice");
+    if (voice && node.openrouterVoiceIds && label in node.openrouterVoiceIds) {
+      voice.value = node.openrouterVoiceIds[label];
+    }
+  }, { values: ["(model default)"], serialize: false });
+  picker.serialize = false;
+  const model = node.widgets.find((w) => w.name === "model");
+  if (model) {
+    const callback = model.callback;
+    model.callback = function () {
+      const r = callback?.apply(this, arguments);
+      loadVoices(node);
+      return r;
+    };
+  }
+  setTimeout(() => loadVoices(node), 0);
 }
 
 function statusWidget(node) {
@@ -93,6 +135,7 @@ app.registerExtension({
       const result = onNodeCreated?.apply(this, arguments);
       // Added after the real widgets and not serialized, so saved workflows keep
       // their widget order.
+      if (nodeData.name === "OpenRouterSpeak") addVoicePicker(this);
       this.addCustomWidget(statusWidget(this));
       const balanceBtn = this.addWidget("button", "refresh balance", null, () => loadBalance());
       const modelsBtn = this.addWidget("button", "refresh models", null, () => refreshModels());
@@ -102,6 +145,15 @@ app.registerExtension({
       }
       return result;
     };
+
+    if (nodeData.name === "OpenRouterSpeak") {
+      const onConfigure = nodeType.prototype.onConfigure;
+      nodeType.prototype.onConfigure = function () {
+        const r = onConfigure?.apply(this, arguments);
+        loadVoices(this); // a loaded workflow sets the model after creation
+        return r;
+      };
+    }
 
     const onExecuted = nodeType.prototype.onExecuted;
     nodeType.prototype.onExecuted = function (message) {

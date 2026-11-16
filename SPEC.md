@@ -188,6 +188,11 @@ https://openrouter.ai/docs/features/multimodal/video-generation
   sent (warning). Saves `.mp4`; outputs the file path (STRING) + info.
   `refs` in the recipe = pixel hashes of the frames sent, so a video links back to
   the portrait it was made from.
+- Speak voice dropdown (owner request): JS "voice list" combo on the Speak node with the
+  selected model's `supported_voices` (route `GET /openrouter/voices?model=`, cache
+  only); picking fills the `voice` text widget (the saved value). ♂/♀ from
+  `user/voices.json`, else a provider `gender` field, else Kokoro-style `af_`/`am_`
+  names; otherwise no mark.
 - Model caches per kind (`user/video_models_cache.json`, `user/speech_models_cache.json`),
   same favorites file, same sort. "refresh models" refreshes all kinds.
 - Cost/balance display also on Speak and Video nodes.
