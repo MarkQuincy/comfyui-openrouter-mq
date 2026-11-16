@@ -205,6 +205,12 @@ https://openrouter.ai/docs/features/multimodal/video-generation
 - Model caches per kind (`user/video_models_cache.json`, `user/speech_models_cache.json`),
   same favorites file, same sort. "refresh models" refreshes all kinds.
 - Cost/balance display also on Speak and Video nodes.
+- Video preview on the node: the saved mp4 is copied to ComfyUI's temp folder and
+  returned as `ui.images` + `animated` (like ComfyUI's own video nodes).
+- **OpenRouter Cost Report** node (owner request): sums `cost_usd` from `.json` recipes
+  (and the `openrouter` PNG chunk of older images without one) under a folder, grouped by
+  project/person/model/kind/date/author, optional `since` date. Read-only.
+- Pre-run video cost estimate: pending real `pricing_skus` data (units not documented).
 - Not in scope: ComfyUI VIDEO output type, Transcribe node, audio/video references,
   editing/extending a video (`previous_job_id`).
 Check: tests with fake transport (speech bytes, video submit → poll → download,

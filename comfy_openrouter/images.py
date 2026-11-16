@@ -46,6 +46,23 @@ def encode_png(pixels, text=None):
     return b"".join(out)
 
 
+def read_png_text(data):
+    """``tEXt`` chunks of a PNG as a dict (stdlib; used to read older recipes)."""
+    out, pos = {}, 8
+    if data[:8] != b"\x89PNG\r\n\x1a\n":
+        return out
+    while pos + 8 <= len(data):
+        (length,) = struct.unpack(">I", data[pos:pos + 4])
+        kind, body = data[pos + 4:pos + 8], data[pos + 8:pos + 8 + length]
+        if kind == b"tEXt":
+            key, _, value = body.partition(b"\x00")
+            out[key.decode("latin-1")] = value.decode("latin-1")
+        if kind == b"IEND":
+            break
+        pos += 12 + length
+    return out
+
+
 def data_url(png_bytes):
     return "data:image/png;base64," + base64.b64encode(png_bytes).decode("ascii")
 

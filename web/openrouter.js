@@ -152,6 +152,53 @@ function statusWidget(node) {
   };
 }
 
+// Cost Report node: draws the report text on the node after each run.
+function reportWidget(node) {
+  return {
+    name: "openrouter_report",
+    type: "openrouter_report",
+    value: "",
+    serialize: false,
+    options: { serialize: false },
+    computeSize(width) {
+      const lines = (node.openrouterReport || "Run to see the report.").split("\n");
+      return [width, 16 * lines.length + 8];
+    },
+    draw(ctx, _node, width, y) {
+      ctx.save();
+      ctx.font = "12px monospace";
+      ctx.fillStyle = globalThis.LiteGraph?.WIDGET_TEXT_COLOR || "#ddd";
+      ctx.textAlign = "left";
+      const lines = (node.openrouterReport || "Run to see the report.").split("\n");
+      lines.forEach((line, i) => ctx.fillText(line, 15, y + 14 + 16 * i, width - 30));
+      ctx.restore();
+    },
+  };
+}
+
+app.registerExtension({
+  name: "comfyui-openrouter.report",
+  beforeRegisterNodeDef(nodeType, nodeData) {
+    if (nodeData.name !== "OpenRouterCostReport") return;
+    const onNodeCreated = nodeType.prototype.onNodeCreated;
+    nodeType.prototype.onNodeCreated = function () {
+      const r = onNodeCreated?.apply(this, arguments);
+      this.addCustomWidget(reportWidget(this));
+      return r;
+    };
+    const onExecuted = nodeType.prototype.onExecuted;
+    nodeType.prototype.onExecuted = function (message) {
+      onExecuted?.apply(this, arguments);
+      const text = message?.openrouter_report?.[0];
+      if (text) {
+        this.openrouterReport = text;
+        this.setSize([this.size[0], this.computeSize()[1]]);
+        redraw();
+      }
+    };
+  },
+});
+
 app.registerExtension({
   name: "comfyui-openrouter.generate",
 

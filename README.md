@@ -24,7 +24,8 @@ image can go on to any other node (here: background removal).*
 | OpenRouter Context | Project + person, typed once, wired to all Generate nodes of one person |
 | OpenRouter Generate | Prompt + up to 4 reference images + model → IMAGE; saves the file; shows cost and balance |
 | OpenRouter Speak | Text → speech (AUDIO); saves `.mp3` (or `.wav` for `pcm`) |
-| OpenRouter Video | Prompt + optional first/last frame → video; saves `.mp4`, outputs its path |
+| OpenRouter Video | Prompt + optional first/last frame → video; saves `.mp4`, shows it on the node, outputs its path |
+| OpenRouter Cost Report | Adds up the cost of all saved files in a folder, grouped by project, person, model, kind, date or author |
 
 ## Install (Windows, PowerShell)
 
@@ -93,6 +94,13 @@ Every saved file (image, audio, video) also gets a **JSON recipe** with the same
 e.g. `..._001.png` + `..._001.json` (schema `openrouter-meta/2`: the same fields plus
 `kind`, `file` and `file_hash`). A video's recipe lists the pixel hash of its first/last
 frame, so it links back to the portrait it was made from.
+
+### Cost report
+Add **OpenRouter Cost Report**, pick **group_by** and optionally **since**
+(`2026-11-01`) and **folder** (same meaning as on Generate), press Run. The totals are
+shown on the node and on its `report` output. It reads the `.json` recipes (and the
+metadata inside older PNGs that have no `.json`); files without a known cost (e.g.
+speech) are counted and marked "without cost".
 
 ### Speech and video
 - **Speak**: pick a model from the dropdown. Leave **voice** empty for the model's
