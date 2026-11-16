@@ -126,7 +126,11 @@ speech) are counted and marked "without cost".
   `format` `pcm` is saved as `.wav` (assumed 24 kHz mono); `mp3` needs
   torchaudio with mp3 support for the AUDIO output (the file is saved either way).
   OpenRouter does not report speech cost, so it shows as unknown.
-- **Video**: connect a Generate image to `first_frame` (and optionally `last_frame`).
+- **Video**: when you pick a model, the node shows its allowed lengths and resolutions,
+  its price range and an estimate for the chosen **duration** (price × seconds; OpenRouter
+  lists prices without a unit, and video models are priced per second). The duration
+  field is limited to the model's longest length.
+  Connect a Generate image to `first_frame` (and optionally `last_frame`).
   `duration` 0 = model default; values the model does not support are not sent
   (console warning). A job takes from 30 s to several minutes; the node waits and stops
   waiting if you press Cancel (OpenRouter may still charge for the started job).

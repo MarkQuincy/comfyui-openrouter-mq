@@ -264,3 +264,23 @@ def test_video_preview_copies_into_temp(tmp_path):
     assert (tmp_path / "temp" / "openrouter_clip_001.mp4").read_bytes() == FAKE_MP4
     assert saved.read_bytes() == FAKE_MP4  # saved file untouched
     assert v.preview_ui(saved, None) == {}  # outside ComfyUI: no preview
+
+
+def test_video_model_info_for_the_node(tmp_path):
+    cache = tmp_path / "video.json"
+    model = {"id": "bytedance/seedance-2.0-fast", "supported_durations": [8, 4, 5, -1],
+             "supported_resolutions": ["480p", "720p"], "supported_aspect_ratios": ["9:16"],
+             "pricing_skus": {"480p": "0.04035", "720p": "0.12", "bad": "n/a"}}
+    model_list.save_cache([model], cache)
+    info = v.model_info_payload("bytedance / seedance-2.0-fast", cache_path=cache)
+    assert info == {"durations": [-1, 4, 5, 8], "resolutions": ["480p", "720p"],
+                    "aspect_ratios": ["9:16"], "prices": {"480p": 0.04035, "720p": 0.12}}
+    empty = v.model_info_payload("nope / none", cache_path=cache)
+    assert empty == {"durations": [], "resolutions": [], "aspect_ratios": [], "prices": {}}
+
+
+def test_js_has_video_info():
+    from pathlib import Path
+    js = (Path(__file__).resolve().parent.parent / "web" / "openrouter.js").read_text(
+        encoding="utf-8")
+    assert "/openrouter/video_model?model=" in js and "Estimate for" in js

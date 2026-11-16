@@ -51,6 +51,7 @@ async function refreshModels() {
       if (app.refreshComboInNodes) await app.refreshComboInNodes();
       for (const node of app.graph?._nodes || []) {
         if (node.type === "OpenRouterSpeak") loadVoices(node);
+        if (node.type === "OpenRouterVideo") loadVideoInfo(node);
       }
     }
   } catch (err) {
@@ -152,6 +153,91 @@ function statusWidget(node) {
   };
 }
 
+// Video node: allowed lengths/resolutions of the selected model and a price estimate.
+// OpenRouter gives prices without a unit; video models are priced per second
+// (e.g. Seedance), so the estimate is price x duration and says so.
+function videoLines(node) {
+  const d = node.openrouterVideo;
+  if (!d) return ["Model info: loading…"];
+  const durs = d.durations.filter((x) => x > 0);
+  const contiguous = durs.length > 2 && durs[durs.length - 1] - durs[0] === durs.length - 1;
+  const lengths = !durs.length ? "not listed"
+    : contiguous ? `${durs[0]}–${durs[durs.length - 1]} s` : durs.join(", ") + " s";
+  const auto = d.durations.includes(-1) ? " (or auto)" : "";
+  const res = d.resolutions.length ? d.resolutions.join(", ") : "resolutions not listed";
+  const lines = [`Lengths: ${lengths}${auto} · ${res}`];
+  const prices = Object.values(d.prices);
+  if (!prices.length) return [...lines, "Price: not listed for this model"];
+  const lo = Math.min(...prices), hi = Math.max(...prices);
+  const range = (a, b) => (a === b ? `$${a.toFixed(4)}` : `$${a.toFixed(4)}–$${b.toFixed(4)}`);
+  const tiers = prices.length > 1 ? ` (${prices.length} tiers)` : "";
+  lines.push(`Price: ${range(lo, hi)} per s${tiers}`);
+  const secs = node.widgets?.find((w) => w.name === "duration")?.value || 0;
+  lines.push(secs > 0 ? `Estimate for ${secs} s: ≈ ${range(lo * secs, hi * secs)}`
+    : "Duration 0 = model default: set seconds for an estimate");
+  return lines;
+}
+
+function videoInfoWidget(node) {
+  return {
+    name: "openrouter_video_info",
+    type: "openrouter_video_info",
+    value: "",
+    serialize: false,
+    options: { serialize: false },
+    computeSize(width) {
+      return [width, 16 * videoLines(node).length + 6];
+    },
+    draw(ctx, _node, width, y) {
+      ctx.save();
+      ctx.font = "12px sans-serif";
+      ctx.fillStyle = globalThis.LiteGraph?.WIDGET_TEXT_COLOR || "#ddd";
+      ctx.textAlign = "left";
+      videoLines(node).forEach((line, i) => ctx.fillText(line, 15, y + 14 + 16 * i, width - 30));
+      ctx.restore();
+    },
+  };
+}
+
+async function loadVideoInfo(node) {
+  const model = node.widgets?.find((w) => w.name === "model")?.value;
+  if (!model) return;
+  try {
+    const url = `/openrouter/video_model?model=${encodeURIComponent(model)}`;
+    node.openrouterVideo = await (await api.fetchApi(url)).json();
+    const durs = node.openrouterVideo.durations.filter((x) => x > 0);
+    const duration = node.widgets.find((w) => w.name === "duration");
+    if (duration && durs.length) {
+      duration.options = { ...duration.options, max: durs[durs.length - 1] };
+      if (duration.value !== 0 && !durs.includes(duration.value)) {
+        // Nearest allowed length, so the estimate matches what will be sent.
+        duration.value = durs.reduce((a, b) =>
+          Math.abs(b - duration.value) < Math.abs(a - duration.value) ? b : a);
+      }
+    }
+  } catch (err) {
+    node.openrouterVideo = { durations: [], resolutions: [], aspect_ratios: [], prices: {} };
+  }
+  node.setSize([node.size[0], node.computeSize()[1]]);
+  redraw();
+}
+
+function hookVideo(node) {
+  for (const name of ["model", "duration"]) {
+    const w = node.widgets?.find((x) => x.name === name);
+    if (!w) continue;
+    const callback = w.callback;
+    w.callback = function () {
+      const r = callback?.apply(this, arguments);
+      if (name === "model") loadVideoInfo(node);
+      else redraw();
+      return r;
+    };
+  }
+  node.addCustomWidget(videoInfoWidget(node));
+  setTimeout(() => loadVideoInfo(node), 0);
+}
+
 // Cost Report node: draws the report text on the node after each run.
 function reportWidget(node) {
   return {
@@ -218,6 +304,7 @@ app.registerExtension({
         hookLanguage(this);
         addVoicePicker(this);
       }
+      if (nodeData.name === "OpenRouterVideo") hookVideo(this);
       this.addCustomWidget(statusWidget(this));
       const balanceBtn = this.addWidget("button", "refresh balance", null, () => loadBalance());
       const modelsBtn = this.addWidget("button", "refresh models", null, () => refreshModels());
@@ -227,6 +314,15 @@ app.registerExtension({
       }
       return result;
     };
+
+    if (nodeData.name === "OpenRouterVideo") {
+      const onConfigure = nodeType.prototype.onConfigure;
+      nodeType.prototype.onConfigure = function () {
+        const r = onConfigure?.apply(this, arguments);
+        loadVideoInfo(this); // a loaded workflow sets the model after creation
+        return r;
+      };
+    }
 
     if (nodeData.name === "OpenRouterSpeak") {
       const onConfigure = nodeType.prototype.onConfigure;
