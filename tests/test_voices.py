@@ -53,7 +53,8 @@ def test_payload_from_cache_by_label(tmp_path):
     assert data["ids"][:3] == ["", "af_bella", "am_adam"]
     unknown = v.voices_payload("nope / none", cache_path=cache, marks_path=tmp_path / "m.json",
                              lists_path=tmp_path / "l.json")
-    assert unknown == {"labels": ["(model default)"], "ids": [""]}
+    assert unknown["labels"] == ["(model default)"] and unknown["ids"] == [""]
+    assert unknown["cloning"].startswith("Voice cloning: not listed")
 
 
 def test_js_has_voice_picker():

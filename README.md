@@ -95,6 +95,25 @@ e.g. `..._001.png` + `..._001.json` (schema `openrouter-meta/2`: the same fields
 `kind`, `file` and `file_hash`). A video's recipe lists the pixel hash of its first/last
 frame, so it links back to the portrait it was made from.
 
+### Voice cloning (Speak)
+Connect **Load Audio** with a clean recording of one speaker (10–30 s, no music) to
+**voice_sample** on the Speak node; a batch counts as up to 3 clips. Optionally connect
+the words spoken in it to **sample_text** (type them in a Prompt node, or use a local
+Whisper node). With a sample connected, **voice** is not sent.
+
+The line under the voice list says whether the selected model supports cloning. OpenRouter
+does not mark this in its model list; the note is based on the models its docs name:
+
+| Model | Cloning |
+|---|---|
+| Seed Audio 1.0 (`bytedance-seed/seed-audio-1-0`) | Up to 3 clips; refer to them as `@Audio1`, `@Audio2` in the text; transcript ignored |
+| Fish Audio (`fish-audio/…`) | 1 clip, transcript recommended (not with S1) |
+| HeyGen Voice (`heygen/heygen-voice-1`) | 1 WAV/MP3 clip (first 3 minutes used); format `pcm` |
+| Mistral Voxtral | Zero-shot from a short clip |
+
+Other models may reject a sample. Only clone voices you have permission to use (your own,
+a consenting speaker, or audio you hold the rights to).
+
 ### Cost report
 Add **OpenRouter Cost Report**, pick **group_by** and optionally **since**
 (`2026-11-01`) and **folder** (same meaning as on Generate), press Run. The totals are

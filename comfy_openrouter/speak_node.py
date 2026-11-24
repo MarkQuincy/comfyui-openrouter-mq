@@ -3,7 +3,7 @@
 import io
 import wave
 
-from . import languages, metadata
+from . import cloning, languages, metadata
 from . import models as model_list
 from .client import OpenRouterError
 from .generate_node import (NO_MODELS, current_prompt_id, file_fields, find_model, info_text,
@@ -17,12 +17,19 @@ FORMATS = ["mp3", "pcm"]
 PCM_RATE = 24000
 
 
-def speak(client, model_info, text, settings):
-    """``settings``: voice, format, speed, instructions. Returns ``(audio_bytes, info)``."""
+def speak(client, model_info, text, settings, clips=(), transcript=""):
+    """``settings``: voice, format, speed, instructions. ``clips``: WAV bytes of voice
+    samples for cloning (voice is then not sent). Returns ``(audio_bytes, info)``."""
     if not text or not text.strip():
         raise ValueError("Text is empty")
     payload = {"model": model_info["id"], "input": text, "response_format": settings["format"]}
-    if settings["voice"].strip():
+    refs = []
+    if clips:
+        payload["input_references"], refs = cloning.references(list(clips), transcript)
+        if settings["voice"].strip():
+            log.warning("[OpenRouter] voice sample connected: voice %r is not sent",
+                        settings["voice"])
+    elif settings["voice"].strip():
         payload["voice"] = settings["voice"].strip()
     if settings["speed"] != 1.0:
         payload["speed"] = settings["speed"]
@@ -31,16 +38,22 @@ def speak(client, model_info, text, settings):
     try:
         audio = client.speech(payload)
     except OpenRouterError as exc:
+        if clips and exc.status in (400, 404):
+            raise OpenRouterError(f"{exc}. {cloning.note(model_info['id'])}.",
+                                  status=exc.status) from exc
         if "voice" not in payload and exc.status == 400 and "voice" in str(exc).lower():
             raise OpenRouterError(
                 f"{exc}. {model_info['id']} has no default voice and OpenRouter lists no "
                 f"voices for it: type a voice name from the model's page on openrouter.ai.",
                 status=exc.status) from exc
         raise
-    params = {k: v for k, v in payload.items() if k not in ("model", "input")}
+    params = {k: v for k, v in payload.items()
+              if k not in ("model", "input", "input_references")}
+    if transcript.strip() and clips:
+        params["sample_text"] = transcript.strip()
     # shortcut: speech responses carry no cost; it would need GET /generation by id.
     info = {"model": model_info["id"], "cost_usd": None, "seed": None, "params": params,
-            "params_sent": list(params), "refs_sent": 0, "refs": []}
+            "params_sent": list(params), "refs_sent": len(refs), "refs": refs}
     return audio, info
 
 
@@ -57,7 +70,7 @@ def pcm_to_wav(pcm, rate=PCM_RATE):
 def save_speech(audio, fmt, info, text, context, name, folder, pattern,
                 node_id=None, prompt_id=None):
     data, ext = (audio, ".mp3") if fmt == "mp3" else (pcm_to_wav(audio), ".wav")
-    meta = metadata.build(info, text, context, name, None, [], node_id=node_id,
+    meta = metadata.build(info, text, context, name, None, info["refs"], node_id=node_id,
                           prompt_id=prompt_id)
     return metadata.save_with_recipe(folder, pattern, file_fields(info, context, name), data,
                                      ext, meta, "audio")
@@ -135,6 +148,9 @@ class OpenRouterSpeak:
             "optional": {
                 "context": ("OR_CONTEXT",),
                 "folder": ("STRING", {"default": ""}),
+                # Voice cloning: up to 3 clips (a batch counts as several) + transcript.
+                "voice_sample": ("AUDIO",),
+                "sample_text": ("STRING", {"forceInput": True}),
             },
             "hidden": {"unique_id": "UNIQUE_ID"},
         }
@@ -146,15 +162,15 @@ class OpenRouterSpeak:
         return True
 
     def run(self, text, model, voice, format, speed, instructions, name, language=None,
-            context=None,
-            folder="", unique_id=None):
+            context=None, folder="", voice_sample=None, sample_text="", unique_id=None):
         client = make_client()
         if client is None:
             raise RuntimeError("OPENROUTER_API_KEY is not set (set it and restart ComfyUI)")
         model_info = find_model(model_list.id_from_label(model), client, "speech")
         settings = {"voice": voice, "format": format, "speed": speed,
                     "instructions": instructions}
-        audio, info = speak(client, model_info, text, settings)
+        clips = cloning.audio_to_wavs(voice_sample) if voice_sample is not None else []
+        audio, info = speak(client, model_info, text, settings, clips, sample_text or "")
         path = save_speech(audio, format, info, text, context, name, output_dir(folder),
                            load_settings()["filename_pattern"], unique_id, current_prompt_id())
         log.info("[OpenRouter] saved %s", path)

@@ -202,6 +202,14 @@ https://openrouter.ai/docs/features/multimodal/video-generation
   only); picking fills the `voice` text widget (the saved value). ♂/♀ from
   `user/voices.json`, else a provider `gender` field, else Kokoro-style `af_`/`am_`
   names; otherwise no mark.
+- Voice cloning on Speak (owner request, v1.2 beta): optional `voice_sample` (AUDIO; a
+  batch = up to 3 clips) and `sample_text` (STRING input, transcript of the first clip).
+  Sent as `input_references` (`input_audio` with a WAV data URL; a `text` item right after
+  clip 1); `voice` is then not sent (Seed Audio rejects both). Limits: 3 clips, 15 MiB
+  each, transcript 10,000 chars. Recipe `refs` = `audio_hash` + `seconds` per clip; no
+  audio bytes in the recipe. The models list has no cloning flag: a note on the node
+  ("Voice cloning: yes / not listed") comes from the models OpenRouter's TTS guide names
+  (Seed Audio 1.0, Fish Audio, HeyGen Voice, Mistral Voxtral).
 - Model caches per kind (`user/video_models_cache.json`, `user/speech_models_cache.json`),
   same favorites file, same sort. "refresh models" refreshes all kinds.
 - Cost/balance display also on Speak and Video nodes.

@@ -10,6 +10,7 @@ field from the provider, the built-in list, or a clear naming rule. Otherwise un
 import re
 from pathlib import Path
 
+from . import cloning
 from . import models as model_list
 from .models import USER_DIR, _read_json, _write_json
 
@@ -112,4 +113,5 @@ def voices_payload(model, cache_path=None, marks_path=VOICES_FILE,
     info = model_list.find_model(models, model_id) or {"id": model_id}
     voices = voice_list(info, load_marks(marks_path), load_model_voices(lists_path))
     return {"labels": [DEFAULT] + [label(v) for v in voices],
-            "ids": [""] + [v["id"] for v in voices]}
+            "ids": [""] + [v["id"] for v in voices],
+            "cloning": cloning.note(model_id)}

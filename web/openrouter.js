@@ -73,6 +73,7 @@ async function loadVoices(node) {
     node.openrouterVoiceIds = Object.fromEntries(data.labels.map((l, i) => [l, data.ids[i]]));
     const voice = node.widgets.find((w) => w.name === "voice")?.value || "";
     picker.value = data.labels[data.ids.indexOf(voice)] ?? data.labels[0];
+    node.openrouterCloning = data.cloning || "";
   } catch (err) {
     picker.options.values = ["(voices unavailable)"];
   }
@@ -119,6 +120,25 @@ function addVoicePicker(node) {
     }
   }, { values: ["(model default)"], serialize: false });
   picker.serialize = false;
+  // One line under the list: does the selected model support voice cloning?
+  node.addCustomWidget({
+    name: "openrouter_cloning_note",
+    type: "openrouter_cloning_note",
+    value: "",
+    serialize: false,
+    options: { serialize: false },
+    computeSize(width) {
+      return [width, 20];
+    },
+    draw(ctx, _node, width, y) {
+      ctx.save();
+      ctx.font = "12px sans-serif";
+      ctx.fillStyle = globalThis.LiteGraph?.WIDGET_SECONDARY_TEXT_COLOR || "#aaa";
+      ctx.textAlign = "left";
+      ctx.fillText(node.openrouterCloning || "Voice cloning: …", 15, y + 14, width - 30);
+      ctx.restore();
+    },
+  });
   const model = node.widgets.find((w) => w.name === "model");
   if (model) {
     const callback = model.callback;

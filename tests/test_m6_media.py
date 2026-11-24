@@ -195,7 +195,8 @@ def no_models(monkeypatch):
 def test_speak_and_video_node_definitions(no_models):
     speak, video = s.OpenRouterSpeak.INPUT_TYPES(), v.OpenRouterVideo.INPUT_TYPES()
     assert speak["required"]["text"] == ("STRING", {"forceInput": True})
-    assert set(speak["optional"]) == {"context", "folder"}
+    assert set(speak["optional"]) == {"context", "folder", "voice_sample", "sample_text"}
+    assert speak["optional"]["voice_sample"] == ("AUDIO",)
     assert s.OpenRouterSpeak.RETURN_TYPES == ("AUDIO", "STRING")
     assert video["required"]["prompt"] == ("STRING", {"forceInput": True})
     assert set(video["optional"]) == {"context", "first_frame", "last_frame", "folder"}
