@@ -185,6 +185,7 @@ models in the dropdowns (the examples use `google / gemini-3-pro-image`).
 | `04_model_comparison.json` | One prompt → 3 Generate nodes, pick a different model in each |
 | `05_speak.json` | Text → speech → Preview Audio |
 | `06_portrait_to_video.json` | Generate a portrait, then use it as the first frame of a video |
+| `07_voice_clone_whisper.json` | Voice cloning: Load Audio → Speak `voice_sample`; a local Whisper node (ComfyUI-Whisper pack) transcribes it → `sample_text` |
 
 For the next person: copy the nodes (Ctrl+C / Ctrl+V), change Context, prompt and photo.
 

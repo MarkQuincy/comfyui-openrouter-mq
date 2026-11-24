@@ -58,7 +58,8 @@ class Workflow:
     def speak(self, pos, name, model=SPEECH_MODEL):
         widgets = ["All languages", model, "", "mp3", 1.0, "", name, ""]
         return self._node("OpenRouterSpeak", pos, (360, 330), widgets,
-                          inputs=[("text", "STRING"), ("context", "OR_CONTEXT")],
+                          inputs=[("text", "STRING"), ("context", "OR_CONTEXT"),
+                                  ("voice_sample", "AUDIO"), ("sample_text", "STRING")],
                           outputs=[("audio", "AUDIO"), ("info", "STRING")])
 
     def video(self, pos, name, model=VIDEO_MODEL):
@@ -71,6 +72,17 @@ class Workflow:
     def preview_audio(self, pos):
         return self._node("PreviewAudio", pos, (320, 120), [],
                           inputs=[("audio", "AUDIO")])
+
+    def load_audio(self, pos, filename="voice_sample.wav"):
+        return self._node("LoadAudio", pos, (320, 140), [filename, None, None],
+                          outputs=[("AUDIO", "AUDIO")])
+
+    def whisper(self, pos, model="turbo"):
+        # Node from the ComfyUI-Whisper pack (yuvraj108c): text output is slot 0.
+        return self._node("Apply Whisper", pos, (320, 160), [model, "auto", ""],
+                          inputs=[("audio", "AUDIO")],
+                          outputs=[("text", "STRING"), ("segments_alignment", "whisper_alignment"),
+                                   ("words_alignment", "whisper_alignment")])
 
     def link(self, src, src_slot, dst, dst_name):
         dst_slot = next(i for i, x in enumerate(dst["inputs"]) if x["name"] == dst_name)
@@ -197,6 +209,29 @@ def portrait_to_video():
     return w
 
 
+def voice_clone_whisper():
+    w = Workflow()
+    w.note((40, 40), "Voice cloning with a local transcript.\n1. Load Audio: 10-30 s of one "
+           "clear voice (yours, or a speaker who agreed).\n2. Apply Whisper (ComfyUI-Whisper "
+           "pack) writes down what is said there -> sample_text. Pick your Whisper model.\n"
+           "3. Prompt: what the cloned voice should say (same language as the sample).\n"
+           "Seed Audio 1.0 supports cloning; voice stays empty. The line under the voice "
+           "list shows whether a model supports cloning.", size=(440, 220))
+    ctx = w.context((40, 300), "ProjectX", "Ivan Petrov")
+    sample = w.load_audio((40, 440))
+    whisper = w.whisper((420, 440))
+    p = w.prompt((420, 40), "Hello! This is my cloned voice, made with OpenRouter in ComfyUI.")
+    sp = w.speak((860, 40), "clone", model="bytedance-seed / seed-audio-1-0")
+    out = w.preview_audio((1260, 40))
+    w.link(p, 0, sp, "text")
+    w.link(ctx, 0, sp, "context")
+    w.link(sample, 0, sp, "voice_sample")
+    w.link(sample, 0, whisper, "audio")
+    w.link(whisper, 0, sp, "sample_text")
+    w.link(sp, 0, out, "audio")
+    return w
+
+
 EXAMPLES = {
     "01_single_person.json": single_person,
     "02_face_fullbody_tweak.json": face_fullbody_tweak,
@@ -204,6 +239,7 @@ EXAMPLES = {
     "04_model_comparison.json": model_comparison,
     "05_speak.json": speak_text,
     "06_portrait_to_video.json": portrait_to_video,
+    "07_voice_clone_whisper.json": voice_clone_whisper,
 }
 
 

@@ -112,6 +112,16 @@
           "name": "context",
           "type": "OR_CONTEXT",
           "link": 2
+        },
+        {
+          "name": "voice_sample",
+          "type": "AUDIO",
+          "link": null
+        },
+        {
+          "name": "sample_text",
+          "type": "STRING",
+          "link": null
         }
       ],
       "outputs": [

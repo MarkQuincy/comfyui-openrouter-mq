@@ -44,7 +44,8 @@ def generate_widget_names(monkeypatch):
 def test_examples_exist():
     assert [f.name for f in FILES] == ["01_single_person.json", "02_face_fullbody_tweak.json",
                                        "03_four_variants.json", "04_model_comparison.json",
-                                       "05_speak.json", "06_portrait_to_video.json"]
+                                       "05_speak.json", "06_portrait_to_video.json",
+                                       "07_voice_clone_whisper.json"]
 
 
 def test_files_match_generator():

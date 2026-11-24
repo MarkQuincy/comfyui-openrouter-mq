@@ -1,0 +1,320 @@
+{
+  "last_node_id": 7,
+  "last_link_id": 6,
+  "nodes": [
+    {
+      "id": 1,
+      "type": "Note",
+      "pos": [
+        40,
+        40
+      ],
+      "size": [
+        440,
+        220
+      ],
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [],
+      "properties": {
+        "Node name for S&R": "Note"
+      },
+      "widgets_values": [
+        "Voice cloning with a local transcript.\n1. Load Audio: 10-30 s of one clear voice (yours, or a speaker who agreed).\n2. Apply Whisper (ComfyUI-Whisper pack) writes down what is said there -> sample_text. Pick your Whisper model.\n3. Prompt: what the cloned voice should say (same language as the sample).\nSeed Audio 1.0 supports cloning; voice stays empty. The line under the voice list shows whether a model supports cloning."
+      ]
+    },
+    {
+      "id": 2,
+      "type": "OpenRouterContext",
+      "pos": [
+        40,
+        300
+      ],
+      "size": [
+        320,
+        90
+      ],
+      "flags": {},
+      "order": 1,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "context",
+          "type": "OR_CONTEXT",
+          "links": [
+            2
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "OpenRouterContext"
+      },
+      "widgets_values": [
+        "ProjectX",
+        "Ivan Petrov"
+      ]
+    },
+    {
+      "id": 3,
+      "type": "LoadAudio",
+      "pos": [
+        40,
+        440
+      ],
+      "size": [
+        320,
+        140
+      ],
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "AUDIO",
+          "type": "AUDIO",
+          "links": [
+            3,
+            4
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "LoadAudio"
+      },
+      "widgets_values": [
+        "voice_sample.wav",
+        null,
+        null
+      ]
+    },
+    {
+      "id": 4,
+      "type": "Apply Whisper",
+      "pos": [
+        420,
+        440
+      ],
+      "size": [
+        320,
+        160
+      ],
+      "flags": {},
+      "order": 3,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "audio",
+          "type": "AUDIO",
+          "link": 4
+        }
+      ],
+      "outputs": [
+        {
+          "name": "text",
+          "type": "STRING",
+          "links": [
+            5
+          ]
+        },
+        {
+          "name": "segments_alignment",
+          "type": "whisper_alignment",
+          "links": []
+        },
+        {
+          "name": "words_alignment",
+          "type": "whisper_alignment",
+          "links": []
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "Apply Whisper"
+      },
+      "widgets_values": [
+        "turbo",
+        "auto",
+        ""
+      ]
+    },
+    {
+      "id": 5,
+      "type": "OpenRouterPrompt",
+      "pos": [
+        420,
+        40
+      ],
+      "size": [
+        400,
+        180
+      ],
+      "flags": {},
+      "order": 4,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "prompt",
+          "type": "STRING",
+          "links": [
+            1
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "OpenRouterPrompt"
+      },
+      "widgets_values": [
+        "Hello! This is my cloned voice, made with OpenRouter in ComfyUI."
+      ]
+    },
+    {
+      "id": 6,
+      "type": "OpenRouterSpeak",
+      "pos": [
+        860,
+        40
+      ],
+      "size": [
+        360,
+        330
+      ],
+      "flags": {},
+      "order": 5,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "text",
+          "type": "STRING",
+          "link": 1
+        },
+        {
+          "name": "context",
+          "type": "OR_CONTEXT",
+          "link": 2
+        },
+        {
+          "name": "voice_sample",
+          "type": "AUDIO",
+          "link": 3
+        },
+        {
+          "name": "sample_text",
+          "type": "STRING",
+          "link": 5
+        }
+      ],
+      "outputs": [
+        {
+          "name": "audio",
+          "type": "AUDIO",
+          "links": [
+            6
+          ]
+        },
+        {
+          "name": "info",
+          "type": "STRING",
+          "links": []
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "OpenRouterSpeak"
+      },
+      "widgets_values": [
+        "All languages",
+        "bytedance-seed / seed-audio-1-0",
+        "",
+        "mp3",
+        1.0,
+        "",
+        "clone",
+        ""
+      ]
+    },
+    {
+      "id": 7,
+      "type": "PreviewAudio",
+      "pos": [
+        1260,
+        40
+      ],
+      "size": [
+        320,
+        120
+      ],
+      "flags": {},
+      "order": 6,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "audio",
+          "type": "AUDIO",
+          "link": 6
+        }
+      ],
+      "outputs": [],
+      "properties": {
+        "Node name for S&R": "PreviewAudio"
+      },
+      "widgets_values": []
+    }
+  ],
+  "links": [
+    [
+      1,
+      5,
+      0,
+      6,
+      0,
+      "STRING"
+    ],
+    [
+      2,
+      2,
+      0,
+      6,
+      1,
+      "OR_CONTEXT"
+    ],
+    [
+      3,
+      3,
+      0,
+      6,
+      2,
+      "AUDIO"
+    ],
+    [
+      4,
+      3,
+      0,
+      4,
+      0,
+      "AUDIO"
+    ],
+    [
+      5,
+      4,
+      0,
+      6,
+      3,
+      "STRING"
+    ],
+    [
+      6,
+      6,
+      0,
+      7,
+      0,
+      "AUDIO"
+    ]
+  ],
+  "groups": [],
+  "config": {},
+  "extra": {},
+  "version": 0.4
+}
