@@ -9,7 +9,7 @@ author, project, person, references, workflow) inside the PNG.
 > real ComfyUI on Windows, and the code has automated tests, but please review it
 > before relying on it.
 
-Version 1.1.0 (images, speech, video, JSON recipes, cost report). Design notes: `SPEC.md`. License: MIT.
+Version 1.2.0 (images, speech with voice cloning, video, JSON recipes, cost report). Design notes: `SPEC.md`. License: MIT.
 
 ![OpenRouter nodes in ComfyUI: a reference photo and a prompt go into OpenRouter Generate, which returns a full-body studio portrait and shows the run's cost](docs/screenshot.png)
 
