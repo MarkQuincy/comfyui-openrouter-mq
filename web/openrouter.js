@@ -74,8 +74,11 @@ async function loadVoices(node) {
     const voice = node.widgets.find((w) => w.name === "voice")?.value || "";
     picker.value = data.labels[data.ids.indexOf(voice)] ?? data.labels[0];
     node.openrouterCloning = data.cloning || "";
+    node.openrouterVoicesFor = model;
   } catch (err) {
     picker.options.values = ["(voices unavailable)"];
+    node.openrouterCloning = "Voice cloning: unknown (could not load)";
+    node.openrouterVoicesFor = model; // no retry loop on every redraw
   }
   redraw();
 }
@@ -131,11 +134,19 @@ function addVoicePicker(node) {
       return [width, 20];
     },
     draw(ctx, _node, width, y) {
+      // Self-heal: if the model changed without its event reaching us, reload once.
+      const current = node.widgets?.find((w) => w.name === "model")?.value;
+      if (current && current !== node.openrouterVoicesFor && !node.openrouterVoicesLoading) {
+        node.openrouterVoicesLoading = true;
+        loadVoices(node).finally(() => { node.openrouterVoicesLoading = false; });
+      }
+      const stale = current !== node.openrouterVoicesFor;
       ctx.save();
       ctx.font = "12px sans-serif";
       ctx.fillStyle = globalThis.LiteGraph?.WIDGET_SECONDARY_TEXT_COLOR || "#aaa";
       ctx.textAlign = "left";
-      ctx.fillText(node.openrouterCloning || "Voice cloning: …", 15, y + 14, width - 30);
+      const text = stale ? "Voice cloning: …" : node.openrouterCloning || "Voice cloning: …";
+      ctx.fillText(text, 15, y + 14, width - 30);
       ctx.restore();
     },
   });
