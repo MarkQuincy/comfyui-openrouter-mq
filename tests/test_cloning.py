@@ -25,7 +25,7 @@ def test_notes_per_model():
     assert cloning.note("fish-audio/s2.1-pro").startswith("Voice cloning: yes")
     assert cloning.note("mistralai/voxtral-tts").startswith("Voice cloning: yes")
     assert cloning.note("heygen/heygen-voice-1").startswith("Voice cloning: yes")
-    assert cloning.note("elevenlabs/eleven-v4") == cloning.UNKNOWN
+    assert cloning.note("elevenlabs/eleven-v4") == cloning.UNKNOWN + " (elevenlabs/eleven-v4)"
 
 
 def test_references_shape_and_transcript_after_first_clip():

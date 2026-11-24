@@ -30,7 +30,8 @@ def note(model_id):
     for key, text in NOTES.items():
         if key in (model_id or ""):
             return text
-    return UNKNOWN
+    # Naming the model makes it visible which model the server was asked about.
+    return f"{UNKNOWN} ({model_id or 'no model'})"
 
 
 def wav_from_pcm16(pcm, channels, rate):
