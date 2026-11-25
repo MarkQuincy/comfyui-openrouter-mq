@@ -5,6 +5,7 @@ from pathlib import Path
 
 from . import metadata
 from . import models as model_list
+from .client import OpenRouterError
 from .generate_node import (AUTO, NO_MODELS, SEED_MAX, current_prompt_id, file_fields,
                             find_model, info_text, log, make_client, model_choices,
                             output_dir, ui_payload)
@@ -23,8 +24,16 @@ CHECKED = {"aspect_ratio": "supported_aspect_ratios", "resolution": "supported_r
 def video_payload(model_info, prompt, settings, frames):
     """``settings``: aspect_ratio, resolution, duration, generate_audio, seed.
     ``frames``: list of ``(frame_type, pixels)``. Returns ``(payload, info, warnings)``."""
+    warnings = []
+    listed = model_info.get("supported_frame_images")
+    if frames and isinstance(listed, list) and listed:
+        skipped = [kind for kind, _ in frames if kind not in listed]
+        if skipped:
+            warnings.append(f"not supported by {model_info['id']}, not sent: "
+                            f"{', '.join(skipped)} (allowed: {listed})")
+            frames = [f for f in frames if f[0] in listed]
     if not (prompt or "").strip() and not frames:
-        raise ValueError("Prompt is empty (and no first/last frame given)")
+        raise ValueError("Prompt is empty (and no first/last frame the model accepts)")
     params = {
         "aspect_ratio": settings["aspect_ratio"],
         "resolution": settings["resolution"],
@@ -33,7 +42,7 @@ def video_payload(model_info, prompt, settings, frames):
         "seed": settings["seed"],
     }
     params = {k: v for k, v in params.items() if v is not None and v != AUTO}
-    warnings, dropped = [], []
+    dropped = []
     for key, field in CHECKED.items():
         allowed = model_info.get(field)
         if key in params and isinstance(allowed, list) and allowed and params[key] not in allowed:
@@ -55,10 +64,41 @@ def video_payload(model_info, prompt, settings, frames):
     return payload, info, warnings
 
 
+OPTIONAL = ("aspect_ratio", "resolution", "duration", "generate_audio", "seed")
+NO_PROVIDER_HINT = ("No provider could serve this request. Check that the model accepts a first or "
+                    "last frame (only some do), that the aspect ratio, resolution and duration are "
+                    "ones it lists, and that your account's privacy or region settings on "
+                    "openrouter.ai allow its provider.")
+
+
 def make_video(client, model_info, prompt, settings, frames, check_cancel=None):
     """Returns ``(mp4_bytes, info, warnings)``."""
     payload, info, warnings = video_payload(model_info, prompt, settings, frames)
-    data, info["cost_usd"] = client.video(payload, check_cancel=check_cancel)
+    for text in warnings:  # logged before the request, so they also show when it fails
+        log.warning("[OpenRouter] %s", text)
+    try:
+        data, cost = client.video(payload, check_cancel=check_cancel)
+    except OpenRouterError as exc:
+        if exc.status != 404 or "endpoint" not in str(exc).lower():
+            raise
+        extras = [k for k in OPTIONAL if k in payload]
+        if not extras:
+            raise OpenRouterError(f"{exc} {NO_PROVIDER_HINT}", status=exc.status) from exc
+        # A 404 means no job was created, so nothing was charged: retry once with only the essentials.
+        text = f"no provider took the request with {', '.join(extras)}; retrying without them"
+        log.warning("[OpenRouter] %s", text)
+        warnings.append(text)
+        essentials = {k: v for k, v in payload.items() if k not in extras}
+        try:
+            data, cost = client.video(essentials, check_cancel=check_cancel)
+        except OpenRouterError as second:
+            if second.status != 404:
+                raise
+            raise OpenRouterError(f"{exc} It also failed with only the essentials (model, prompt"
+                                  f"{', frames' if 'frame_images' in payload else ''}). "
+                                  f"{NO_PROVIDER_HINT}", status=exc.status) from second
+        info.update(params={}, params_sent=[], seed=None)  # what was really sent
+    info["cost_usd"] = cost
     return data, info, warnings
 
 
@@ -152,8 +192,6 @@ class OpenRouterVideo:
                     "duration": duration, "generate_audio": generate_audio, "seed": seed}
         data, info, warnings = make_video(client, model_info, prompt, settings, frames,
                                           comfy_cancel_check())
-        for text in warnings:
-            log.warning("[OpenRouter] %s", text)
         path = save_video(data, info, prompt, context, name, output_dir(folder),
                           load_settings()["filename_pattern"], unique_id, current_prompt_id())
         log.info("[OpenRouter] saved %s", path)

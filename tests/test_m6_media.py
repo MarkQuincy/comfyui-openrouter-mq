@@ -272,3 +272,71 @@ def test_js_has_video_info():
     js = (Path(__file__).resolve().parent.parent / "web" / "openrouter.js").read_text(
         encoding="utf-8")
     assert "/openrouter/video_model?" in js and "openrouter_video_info" in js
+
+
+class RefusesWithOptionals(FakeTransport):
+    """POST /videos gives 404 'No endpoints found' while optional settings are present."""
+
+    def __call__(self, method, url, headers, body, timeout):
+        if url.endswith("/videos") and method == "POST":
+            payload = json.loads(body)
+            self.calls.append((method, url, headers, payload))
+            if any(k in payload for k in ("aspect_ratio", "seed", "resolution", "duration")):
+                return 404, {"error": {"message": "No endpoints found for fake/video-1."}}
+            return 202, {"id": "gen-vid-1", "polling_url": "/api/v1/videos/gen-vid-1",
+                         "status": "pending"}
+        return super().__call__(method, url, headers, body, timeout)
+
+
+def test_video_404_retries_once_with_only_the_essentials():
+    fake = RefusesWithOptionals()
+    settings = {**VIDEO_SETTINGS, "resolution": "auto", "duration": 4}
+    data, info, warnings = v.make_video(client_with(fake), VIDEO, "walks", settings,
+                                        [("first_frame", FRAME)])
+    first, second = fake.posts()[0][3], fake.posts()[1][3]
+    assert len(fake.posts()) == 2 and "aspect_ratio" in first and "seed" in first
+    assert set(second) == {"model", "prompt", "frame_images"}
+    assert info["params"] == {} and info["params_sent"] == [] and info["seed"] is None
+    assert any("retrying without" in w for w in warnings)
+    assert data == FAKE_MP4 and info["cost_usd"] == 0.5
+
+
+def test_video_404_that_persists_explains_the_causes():
+    class Refuses(FakeTransport):
+        def __call__(self, method, url, headers, body, timeout):
+            if url.endswith("/videos") and method == "POST":
+                self.calls.append((method, url, headers, json.loads(body)))
+                return 404, {"error": {"message": "No endpoints found for fake/video-1."}}
+            return super().__call__(method, url, headers, body, timeout)
+
+    fake = Refuses()
+    with pytest.raises(OpenRouterError, match="also failed with only the essentials.*No provider"):
+        v.make_video(client_with(fake), VIDEO, "p", VIDEO_SETTINGS, [("first_frame", FRAME)])
+    assert len(fake.posts()) == 2  # the full request, then one retry
+    bare = {"aspect_ratio": "auto", "resolution": "auto", "duration": 0,
+            "generate_audio": "auto", "seed": None}
+    with pytest.raises(OpenRouterError, match="No provider could serve this request"):
+        v.make_video(client_with(Refuses()), VIDEO, "p", bare, [])
+
+
+def test_video_other_errors_are_not_retried():
+    class Bad(FakeTransport):
+        def __call__(self, method, url, headers, body, timeout):
+            if url.endswith("/videos") and method == "POST":
+                self.calls.append((method, url, headers, json.loads(body)))
+                return 400, {"error": {"message": "content policy"}}
+            return super().__call__(method, url, headers, body, timeout)
+
+    fake = Bad()
+    with pytest.raises(OpenRouterError, match="content policy"):
+        v.make_video(client_with(fake), VIDEO, "p", VIDEO_SETTINGS, [])
+    assert len(fake.posts()) == 1
+
+
+def test_video_frames_the_model_does_not_list_are_not_sent():
+    model = {**VIDEO, "supported_frame_images": ["first_frame"]}
+    payload, info, warnings = v.video_payload(model, "p", VIDEO_SETTINGS,
+                                              [("first_frame", FRAME), ("last_frame", FRAME)])
+    assert [f["frame_type"] for f in payload["frame_images"]] == ["first_frame"]
+    assert [r["frame_type"] for r in info["refs"]] == ["first_frame"]
+    assert any("last_frame" in w for w in warnings)
